@@ -1,0 +1,24 @@
+{
+  "name": "content-os",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Content agent installable in any creator's Cloudflare account — Powered by Claude",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.40.0",
+    "@cloudflare/containers": "^0.1.0",
+    "@cloudflare/puppeteer": "^1.1.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260501.0",
+    "typescript": "^5.5.0",
+    "wrangler": "^4.0.0"
+  }
+}

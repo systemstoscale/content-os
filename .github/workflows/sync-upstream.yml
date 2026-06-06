@@ -1,0 +1,87 @@
+name: Sync with upstream
+
+# Pulls the latest changes from systemstoscale/acquisition-os (the canonical
+# Deploy-button repo) into your fork. Runs nightly and on manual trigger.
+#
+# Why this needs UPSTREAM_TOKEN:
+#   The upstream repo is PRIVATE — only paying Skalers customers have read
+#   access. The default GITHUB_TOKEN issued to workflows can only see THIS
+#   fork, not the upstream. You must provide a fine-grained PAT with
+#   "Contents: Read" on systemstoscale/acquisition-os and store it as a
+#   repository secret named UPSTREAM_TOKEN in your fork's
+#   Settings → Secrets and variables → Actions.
+#
+# How to get the PAT: github.com/settings/personal-access-tokens → New
+# fine-grained token → resource owner: yourself → repo access: only
+# select repositories: systemstoscale/acquisition-os → permissions:
+# Repository → Contents: Read-only. Rotate by updating UPSTREAM_TOKEN.
+#
+# When this fork updates, Cloudflare Workers Builds auto-redeploys the
+# Worker in your CF account — you get bug fixes + new features for free.
+#
+# Prefer the GitHub UI? Skip the PAT entirely: open your fork on GitHub,
+# click "Sync fork" → "Update branch". This workflow is just the automated
+# version of that button.
+#
+# Disable auto-sync: delete this file from your fork.
+
+on:
+  schedule:
+    # 03:13 UTC daily — odd minute to dodge the hourly thundering-herd window.
+    - cron: '13 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+      - name: Check UPSTREAM_TOKEN is configured
+        env:
+          UPSTREAM_TOKEN: ${{ secrets.UPSTREAM_TOKEN }}
+        run: |
+          if [ -z "$UPSTREAM_TOKEN" ]; then
+            echo "::warning::UPSTREAM_TOKEN secret not set — skipping auto-sync. See workflow file header for how to create the PAT, or use GitHub's 'Sync fork' button manually."
+            exit 0
+          fi
+
+      - name: Add upstream remote + fetch
+        if: ${{ secrets.UPSTREAM_TOKEN != '' }}
+        env:
+          UPSTREAM_TOKEN: ${{ secrets.UPSTREAM_TOKEN }}
+        run: |
+          git remote add upstream "https://x-access-token:${UPSTREAM_TOKEN}@github.com/systemstoscale/acquisition-os.git" || \
+            git remote set-url upstream "https://x-access-token:${UPSTREAM_TOKEN}@github.com/systemstoscale/acquisition-os.git"
+          git fetch upstream main
+
+      - name: Fast-forward main from upstream
+        if: ${{ secrets.UPSTREAM_TOKEN != '' }}
+        id: sync
+        run: |
+          # Fast-forward only. If the fork has diverged (you customised
+          # something), we skip with a clear note rather than forcing —
+          # never lose your work.
+          if git merge-base --is-ancestor HEAD upstream/main 2>/dev/null; then
+            git merge --ff-only upstream/main
+            echo "merged=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "merged=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Fork has diverged from upstream — skipping auto-sync. Resolve manually or delete this workflow."
+          fi
+
+      - name: Push if updated
+        if: steps.sync.outputs.merged == 'true'
+        run: git push origin main

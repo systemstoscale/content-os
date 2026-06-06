@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" fill="#000000"/>
+  <!-- rocket body -->
+  <path d="M256 96 C300 96 326 156 326 232 L326 332 L186 332 L186 232 C186 156 212 96 256 96 Z" fill="#f8d380"/>
+  <!-- window -->
+  <circle cx="256" cy="212" r="34" fill="#000000"/>
+  <!-- left fin -->
+  <path d="M186 296 L138 366 L186 348 Z" fill="#f8d380"/>
+  <!-- right fin -->
+  <path d="M326 296 L374 366 L326 348 Z" fill="#f8d380"/>
+  <!-- exhaust flame -->
+  <path d="M224 332 L256 416 L288 332 Z" fill="#f8d380"/>
+</svg>

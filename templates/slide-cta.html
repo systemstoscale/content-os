@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600&family=Poppins:wght@700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #f8d380; color: #222; font-family: "Inter", sans-serif; -webkit-font-smoothing: antialiased; }
+  .slide { width: 1080px; height: 1350px; padding: 96px 80px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+  .eyebrow { font-family: "Poppins", sans-serif; font-weight: 700; font-size: 28px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 32px; color: #222; }
+  .headline { font-family: "Archivo Black", sans-serif; font-size: 108px; line-height: 1; text-transform: uppercase; margin: 0 0 48px; max-width: 900px; }
+  .cta-line { font-size: 38px; line-height: 1.32; font-weight: 600; max-width: 880px; margin-bottom: 56px; }
+  .badge { display: inline-flex; align-items: center; padding: 28px 48px; background: #222; color: #f8d380; font-family: "Archivo Black", sans-serif; font-size: 36px; text-transform: uppercase; letter-spacing: 0.06em; border-radius: 8px; }
+  .footer { position: absolute; bottom: 64px; left: 0; right: 0; text-align: center; font-family: "Poppins", sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(34,34,34,0.6); }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="eyebrow">{{ EYEBROW }}</div>
+  <h1 class="headline">{{ HEADLINE }}</h1>
+  <div class="cta-line">{{ CTA_LINE }}</div>
+  <div class="badge">{{ CTA_BADGE }}</div>
+</div>
+<div class="footer">{{ BRAND_HANDLE }}</div>
+</body>
+</html>

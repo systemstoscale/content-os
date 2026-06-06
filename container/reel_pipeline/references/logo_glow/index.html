@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      /* Brand: Archivo Black wordmark all-caps, kerning -3%, GOLD PERIOD as
+         the system anchor. Card radius 8px, hairline `#3a3a3a` border,
+         Inter for body, Poppins 700 for sub-display. */
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: transparent;
+        font-family: "Inter", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        color: #ffffff;
+      }
+
+      /* Card anchored to BOTTOM (y=1700). Logo + tagline is text-only so
+         height fits content. min-height keeps visual breathing room for
+         the wordmark + tagline + accent line stack. */
+      .card {
+        position: absolute;
+        left: 80px;
+        right: 80px;
+        bottom: 220px;
+        height: auto;
+        min-height: 460px;
+        max-height: 680px;
+        padding: 48px 48px;
+        background: rgba(34, 34, 34, 0.88);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 32px;
+        opacity: 0;
+      }
+
+      .label {
+        font-family: "Poppins", system-ui, sans-serif;  /* Sub-display 700 */
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.5);
+        opacity: 0;
+      }
+
+      /* Wordmark wrapper carries the clip-path for the L→R mask reveal.
+         Using a CSS custom property `--reveal` lets GSAP animate it via
+         the CSSPlugin (--var support is built into modern GSAP). */
+      .wordmark-wrap {
+        --reveal: 100%;
+        position: relative;
+        clip-path: inset(-30px var(--reveal) -30px 0);
+        -webkit-clip-path: inset(-30px var(--reveal) -30px 0);
+        padding: 4px 0;
+      }
+      .wordmark {
+        font-family: "Archivo Black", system-ui, sans-serif;  /* Display 900 */
+        font-size: 124px;
+        font-weight: 900;
+        line-height: 0.95;
+        letter-spacing: -0.03em;     /* Brand: kerning -3% */
+        text-transform: uppercase;
+        color: #ffffff;
+        white-space: nowrap;
+        filter:
+          drop-shadow(0 0 8px  rgba(248, 211, 128, 0))
+          drop-shadow(0 0 18px rgba(248, 211, 128, 0))
+          drop-shadow(0 0 36px rgba(248, 211, 128, 0));
+      }
+      /* Brand: GOLD PERIOD as the system anchor — only the dot is gold. */
+      .wordmark .gold-period {
+        color: #f8d380;
+        margin: 0 -0.04em;
+      }
+      .wordmark.glow {
+        filter:
+          drop-shadow(0 0 8px  rgba(248, 211, 128, 0.55))
+          drop-shadow(0 0 18px rgba(248, 211, 128, 0.30))
+          drop-shadow(0 0 36px rgba(248, 211, 128, 0.15));
+      }
+
+      /* Reveal edge — thin gold scanline that follows the right edge of
+         the clip-path during reveal. */
+      .wordmark-wrap .reveal-edge {
+        position: absolute;
+        top: -10px;
+        bottom: -10px;
+        right: 0;
+        width: 4px;
+        transform: translateX(50%);
+        background: linear-gradient(
+          to bottom,
+          rgba(248, 211, 128, 0) 0%,
+          rgba(248, 211, 128, 0.85) 30%,
+          rgba(248, 211, 128, 0.85) 70%,
+          rgba(248, 211, 128, 0) 100%
+        );
+        box-shadow:
+          0 0 8px  rgba(248, 211, 128, 0.7),
+          0 0 16px rgba(248, 211, 128, 0.4);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .tagline {
+        font-family: "Inter", system-ui, sans-serif;  /* Body 500 */
+        text-align: center;
+        font-size: 36px;
+        font-weight: 500;
+        line-height: 1.3;
+        color: rgba(255, 255, 255, 0.8);
+        opacity: 0;
+        max-width: 760px;
+      }
+      .tagline .gold-text { color: #f8d380; font-weight: 600; }
+
+      /* Subtle gold accent line below the tagline — anchors the layout */
+      .accent-line {
+        width: 0;
+        height: 2px;
+        background: linear-gradient(
+          to right,
+          rgba(248, 211, 128, 0) 0%,
+          rgba(248, 211, 128, 0.7) 50%,
+          rgba(248, 211, 128, 0) 100%
+        );
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="4"
+      data-width="1080"
+      data-height="1920"
+    >
+      <div class="card clip" id="card" data-start="0" data-duration="4" data-track-index="1">
+        <div class="label" id="label">Skalers.io</div>
+
+        <div class="wordmark-wrap" id="wordmarkWrap">
+          <div class="wordmark" id="wordmark">SKALERS<span class="gold-period">.</span>IO</div>
+          <div class="reveal-edge" id="revealEdge"></div>
+        </div>
+
+        <div class="accent-line" id="accent"></div>
+
+        <div class="tagline" id="tagline">
+          The <span class="gold-text">SCALING System</span>.<br/>
+          7 Systems. 7 Figures.
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const E_DECELERATE = "cubic-bezier(0,0,0.2,1)";
+      const E_STANDARD   = "cubic-bezier(0.4,0,0.2,1)";
+
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // 0.00s — Card lifts in (380ms — heavy entrance)
+      gsap.set("#card", { yPercent: 0 });
+      tl.to("#card", { opacity: 1, duration: 0.38, ease: E_DECELERATE }, 0.0);
+
+      // 0.20s — Label fades in (small breath above the mark)
+      tl.to("#label", { opacity: 1, duration: 0.30, ease: E_DECELERATE }, 0.20);
+
+      // 0.45s — HERO MOTION: wordmark mask-reveal sweep, L→R, 620ms.
+      tl.to("#wordmarkWrap",
+        { "--reveal": "0%", duration: 0.62, ease: E_STANDARD },
+        0.45
+      );
+      tl.to("#revealEdge",
+        { opacity: 1, duration: 0.18, ease: E_DECELERATE },
+        0.45
+      );
+      tl.to("#revealEdge",
+        { opacity: 0, duration: 0.22, ease: E_STANDARD },
+        0.85
+      );
+
+      // 1.10s — Glow snaps on (3-layer drop-shadow, opacity step via class)
+      tl.add(() => {
+        document.getElementById("wordmark").classList.add("glow");
+      }, 1.10);
+
+      // 1.20s — Accent line wipes outward from center
+      tl.to("#accent",
+        { width: 360, opacity: 1, duration: 0.40, ease: E_DECELERATE },
+        1.20
+      );
+
+      // 1.40s — Tagline fades in
+      tl.to("#tagline", { opacity: 1, duration: 0.34, ease: E_DECELERATE }, 1.40);
+
+      // 1.95s → 4.00s — Hold (silent on primary content)
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

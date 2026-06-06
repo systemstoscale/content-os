@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@500;600&family=Poppins:wght@700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #222; color: #fff; font-family: "Inter", sans-serif; -webkit-font-smoothing: antialiased; }
+  .slide { width: 1080px; height: 1350px; padding: 96px 80px; box-sizing: border-box; position: relative; }
+
+  .content { display: flex; flex-direction: column; justify-content: center; height: 100%; }
+  .content.with-photo { max-width: 620px; }
+  .content.with-photo .headline { font-size: 96px; }
+
+  .eyebrow { font-family: "Poppins", sans-serif; font-weight: 700; font-size: 28px; letter-spacing: 0.12em; text-transform: uppercase; color: #f8d380; margin-bottom: 32px; }
+  .headline { font-family: "Archivo Black", sans-serif; font-size: 124px; line-height: 0.96; text-transform: uppercase; margin: 0 0 40px; }
+  .sub { font-size: 36px; line-height: 1.32; font-weight: 500; max-width: 880px; color: rgba(255,255,255,0.88); }
+
+  .photo {
+    position: absolute;
+    right: 80px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 340px;
+    height: 420px;
+    border-radius: 18px;
+    background-size: cover;
+    background-position: center;
+    background-color: #333;
+    border: 3px solid #f8d380;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+
+  .footer { position: absolute; bottom: 80px; left: 80px; right: 80px; display: flex; justify-content: space-between; align-items: center; font-family: "Poppins", sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .footer .swipe { color: #f8d380; }
+  .footer .brand { color: rgba(255,255,255,0.5); }
+</style>
+</head>
+<body>
+<div class="slide">
+  <!-- IF HEADSHOT_URL --><div class="photo" style="background-image: url('{{ HEADSHOT_URL }}')"></div><!-- END HEADSHOT_URL -->
+
+  <div class="content <!-- IF HEADSHOT_URL -->with-photo<!-- END HEADSHOT_URL -->">
+    <div class="eyebrow">{{ EYEBROW }}</div>
+    <h1 class="headline">{{ HEADLINE }}</h1>
+    <div class="sub">{{ SUBHEAD }}</div>
+  </div>
+
+  <div class="footer">
+    <div class="brand">{{ BRAND_HANDLE }}</div>
+    <div class="swipe">SWIPE →</div>
+  </div>
+</div>
+</body>
+</html>

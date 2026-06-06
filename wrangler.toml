@@ -1,0 +1,104 @@
+# Deploy-button-ready wrangler config.
+#
+# This file is what ends up as `wrangler.toml` in the public deploy repo at
+# github.com/systemstoscale/content-os. The Cloudflare Deploy button reads this
+# config to know which resources to auto-provision in the student's account.
+#
+# Sync to public repo via: scripts/sync-to-public.sh (renames this to wrangler.toml)
+
+name = "content-os"
+main = "src/index.ts"
+compatibility_date = "2026-05-15"
+compatibility_flags = ["nodejs_compat"]
+
+# Workers Builds runs this before `wrangler deploy` whenever the fork pushes
+# (initial Deploy-button install + every upstream-sync after). It (1) applies
+# all pending D1 migrations so every table/column exists on a fresh install —
+# `wrangler deploy` alone does NOT run migrations — then (2) builds the Next.js
+# SPA static export into ./ui/out which Workers Assets serves. The migrations
+# step is idempotent (wrangler tracks applied ones in d1_migrations), so it's a
+# safe no-op on every subsequent upstream-sync build.
+[build]
+command = "bunx wrangler d1 migrations apply content-os --remote && cd ui && bun install --frozen-lockfile && bun run build"
+
+# Import HTML templates as raw strings.
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
+# Cron Triggers
+#   07:00 UTC daily      → content brief
+[triggers]
+crons = ["* * * * *", "0 7 * * *"]
+
+# KV — secrets store (Deploy button auto-provisions, populates the id).
+[[kv_namespaces]]
+binding = "SECRETS"
+id = ""
+
+# KV — creator config (Deploy button auto-provisions).
+[[kv_namespaces]]
+binding = "CONFIG"
+id = ""
+
+# R2 — generated assets bucket.
+[[r2_buckets]]
+binding = "ASSETS"
+bucket_name = "content-os-assets"
+
+# D1 — Deploy button auto-provisions. `migrations_dir` makes Workers Builds
+# apply every numbered migration in ./migrations/ on each deploy.
+[[d1_databases]]
+binding = "DB"
+database_name = "content-os"
+database_id = ""
+migrations_dir = "migrations"
+
+# Browser Rendering binding (for render_html_to_png).
+[browser]
+binding = "BROWSER"
+
+# Workers AI binding (for Whisper voice transcription).
+[ai]
+binding = "AI"
+
+# Static assets — SPA UI served by Workers Assets.
+[assets]
+directory = "./ui/out"
+binding = "ASSETS_STATIC"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*", "/trigger/*", "/r2/*", "/health"]
+
+# Workflow binding (avatar reels).
+[[workflows]]
+name = "avatar-reel"
+binding = "AVATAR_REEL_WORKFLOW"
+class_name = "AvatarReelWorkflow"
+
+# Workflow binding (reel render: cut -> cinematic b-roll -> captions -> render
+# -> thumbnail, then the Telegram "Reel ready" card).
+[[workflows]]
+name = "reel-render"
+binding = "REEL_RENDER_WORKFLOW"
+class_name = "ReelRenderWorkflow"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Processor"]
+
+# Per-creator config: NO [vars] block. The /setup first-visit wizard inside
+# the Worker captures CREATOR_NAME / CREATOR_TIMEZONE / APPROVAL_EMAIL /
+# ZERNIO_PROFILE_ID etc. and writes them to CONFIG KV. Worker code reads from
+# CONFIG (see src/profile.ts).
+#
+# SECRETS — prompted by the Deploy button form:
+#   ANTHROPIC_API_KEY           (required) — Claude API
+#   ZERNIO_API_KEY              (required) — Zernio publishing + MCP
+#   TELEGRAM_BOT_TOKEN          (optional) — Telegram bot
+#   ELEVENLABS_API_KEY          (optional) — voice clone for avatar reels
+#   KIE_AI_API_KEY              (optional) — AI images + avatar reels (KIE.AI)
+#
+# NOTE: the [[containers]] + [[durable_objects.bindings]] blocks (the reel
+# Processor) live in wrangler.toml and are added here when the public deploy
+# repo is wired for the container rollout.

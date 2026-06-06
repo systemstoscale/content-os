@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      /*
+        Brand compliance (skalers.io/brand):
+          Display    : Archivo Black 900 (hero / banner text)
+          Sub-display: Poppins 700        (eyebrow labels, CTA)
+          Body       : Inter 400/500/600  (paragraphs, emphasis, inline labels)
+          Card radius: 8px (NOT 24/28)
+          Hairline border `#3a3a3a` over Ink `#222`, gold accent `#f8d380`
+      */
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: transparent;
+        font-family: "Inter", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        color: #ffffff;
+      }
+
+      /* Card anchored to BOTTOM of safe-zone (y=1700). Grows UP as far as
+         content needs (height: auto). The chart is the hero element so the
+         card needs a min-height (flex:1 chart would collapse otherwise).
+         1920 - 1700 = 220 bottom inset. Max-height caps the upper edge at
+         y=1020 so face stays clear. */
+      .card {
+        position: absolute;
+        left: 80px;
+        right: 80px;
+        bottom: 220px;
+        height: auto;
+        min-height: 620px;   /* counter needs the chart room */
+        max-height: 680px;
+        padding: 38px 48px 30px;
+        background: rgba(34, 34, 34, 0.88);  /* Ink at 88% */
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid #3a3a3a;            /* hairline (brand spec) */
+        border-radius: 8px;                    /* brand spec */
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        opacity: 0;
+        transform: translateY(40px);
+      }
+
+      .label {
+        font-family: "Poppins", system-ui, sans-serif;  /* Sub-display 700 */
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.20em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.65);
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      .counter-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 6px;
+        margin-bottom: 4px;
+      }
+      .counter {
+        font-family: "Archivo Black", system-ui, sans-serif;  /* Display 900 */
+        font-size: 132px;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        color: #f8d380;
+        opacity: 0;
+        filter:
+          drop-shadow(0 0 8px rgba(248, 211, 128, 0))
+          drop-shadow(0 0 16px rgba(248, 211, 128, 0))
+          drop-shadow(0 0 32px rgba(248, 211, 128, 0));
+      }
+      .counter.glow-on {
+        filter:
+          drop-shadow(0 0 8px rgba(248, 211, 128, 0.55))
+          drop-shadow(0 0 16px rgba(248, 211, 128, 0.30))
+          drop-shadow(0 0 32px rgba(248, 211, 128, 0.15));
+      }
+      .suffix {
+        font-family: "Archivo Black", system-ui, sans-serif;  /* Display 900 */
+        font-size: 50px;
+        font-weight: 900;
+        color: rgba(255, 255, 255, 0.85);
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      .timeframe {
+        font-family: "Inter", system-ui, sans-serif;  /* Body 500 */
+        text-align: center;
+        font-size: 26px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.6);
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      /* Chart — the hero. ~360px tall, full card width. */
+      .chart {
+        position: relative;
+        flex: 1;
+        margin-top: 22px;
+        overflow: visible; /* card itself clips; we want axis labels just inside */
+      }
+      .chart svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+      .grid-line {
+        stroke: rgba(255, 255, 255, 0.10);
+        stroke-width: 1;
+        stroke-dasharray: 6 8;
+        opacity: 0;
+      }
+      .axis-label {
+        font-size: 22px;
+        font-weight: 600;
+        font-family: "Inter", system-ui, sans-serif;  /* Body 600 inline labels */
+        fill: rgba(255, 255, 255, 0.55);
+        opacity: 0;
+      }
+      .axis-tick-label {
+        font-size: 20px;
+        font-weight: 500;
+        font-family: "Inter", system-ui, sans-serif;  /* Body 500 emphasis */
+        fill: rgba(255, 255, 255, 0.4);
+        opacity: 0;
+      }
+      .chart-line {
+        fill: none;
+        stroke: #f8d380;
+        stroke-width: 5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 1000;
+        stroke-dashoffset: 1000;
+        filter: drop-shadow(0 0 4px rgba(248, 211, 128, 0.35));
+      }
+      /* End-point dot: opacity-only animation. SVG `transform: scale()` via
+         GSAP bypasses CSS `transform-box: fill-box` and scales around the
+         viewBox centre, dragging the dot off-position — so we keep it static
+         and let the glow do the cinematic punctuation. */
+      .chart-end {
+        fill: #f8d380;
+        opacity: 0;
+      }
+      .chart-end.glow {
+        filter:
+          drop-shadow(0 0 8px rgba(248, 211, 128, 0.7))
+          drop-shadow(0 0 18px rgba(248, 211, 128, 0.40))
+          drop-shadow(0 0 36px rgba(248, 211, 128, 0.20));
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="4"
+      data-width="1080"
+      data-height="1920"
+    >
+      <div class="card clip" id="card" data-start="0" data-duration="4" data-track-index="1">
+        <div class="label" id="label">Revenue Growth</div>
+
+        <div class="counter-row">
+          <span class="counter" id="counter" data-target="100">$0K</span>
+          <span class="suffix" id="suffix">/mo</span>
+        </div>
+        <div class="timeframe" id="timeframe">in 18 months</div>
+
+        <div class="chart" aria-hidden="true">
+          <svg viewBox="0 0 824 360" preserveAspectRatio="xMidYMid meet">
+            <!-- Horizontal gridlines -->
+            <line class="grid-line" id="gridTop"    x1="60" y1="40"  x2="824" y2="40"  />
+            <line class="grid-line" id="gridMid"    x1="60" y1="180" x2="824" y2="180" />
+            <line class="grid-line" id="gridBottom" x1="60" y1="320" x2="824" y2="320" />
+
+            <!-- Y-axis tick labels -->
+            <text class="axis-tick-label" id="tickHigh" x="0"  y="46"  text-anchor="start">$100K</text>
+            <text class="axis-tick-label" id="tickMid"  x="0"  y="186" text-anchor="start">$50K</text>
+            <text class="axis-tick-label" id="tickLow"  x="0"  y="326" text-anchor="start">$0</text>
+
+            <!-- X-axis -->
+            <line class="grid-line" id="xAxis" x1="60" y1="320" x2="824" y2="320"
+                  style="stroke: rgba(255,255,255,0.20); stroke-dasharray: none;" />
+
+            <!-- The growth curve. Path is from (60, 314) bottom-left to (810, 50) top-right. -->
+            <path
+              class="chart-line"
+              id="chartLine"
+              d="M 60 314 C 220 308 320 280 420 230 S 660 100 810 50"
+            />
+
+            <!-- End-point: solid dot, fades in with glow at the summit -->
+            <circle class="chart-end" id="chartEnd" cx="810" cy="50" r="13" />
+
+            <!-- X-axis tick labels -->
+            <text class="axis-tick-label" id="xStart" x="60"  y="354" text-anchor="start">Month 1</text>
+            <text class="axis-tick-label" id="xEnd"   x="810" y="354" text-anchor="end">Month 18</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const E_DECELERATE = "cubic-bezier(0,0,0.2,1)";
+      const E_STANDARD   = "cubic-bezier(0.4,0,0.2,1)";
+
+      // Lock dasharray to actual rendered path length so the draw is pixel-clean.
+      const path = document.getElementById("chartLine");
+      const pathLen = path.getTotalLength();
+      path.style.strokeDasharray = pathLen;
+      path.style.strokeDashoffset = pathLen;
+
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // 0.00s — Card lifts in (380ms deceleration; this is the heavy entrance)
+      tl.to("#card", { opacity: 1, y: 0, duration: 0.38, ease: E_DECELERATE }, 0.0);
+
+      // 0.18s — Label fades in
+      tl.to("#label", { opacity: 1, y: 0, duration: 0.30, ease: E_DECELERATE }, 0.18);
+
+      // 0.30s — Axis context comes in BEFORE the chart line (so the line reads
+      // as data on the grid, not decoration). Stagger 60ms.
+      tl.to(["#tickLow", "#tickMid", "#tickHigh"], {
+        opacity: 1, duration: 0.30, ease: E_DECELERATE, stagger: 0.06,
+      }, 0.30);
+      tl.to(["#gridBottom", "#gridMid", "#gridTop"], {
+        opacity: 1, duration: 0.30, ease: E_DECELERATE, stagger: 0.06,
+      }, 0.32);
+      tl.to("#xAxis", { opacity: 1, duration: 0.28, ease: E_DECELERATE }, 0.36);
+      tl.to(["#xStart", "#xEnd"], {
+        opacity: 1, duration: 0.28, ease: E_DECELERATE, stagger: 0.06,
+      }, 0.40);
+
+      // 0.55s — Counter target appears (opacity reveal)
+      tl.to("#counter", { opacity: 1, duration: 0.28, ease: E_DECELERATE }, 0.55);
+      tl.to("#suffix", { opacity: 1, y: 0, duration: 0.28, ease: E_DECELERATE }, 0.62);
+      tl.to("#timeframe", { opacity: 1, y: 0, duration: 0.28, ease: E_DECELERATE }, 0.70);
+
+      // 0.85s — THE chart line draw. 900ms is the slowest tween in the comp;
+      // this one slow growth read is the cinematic moment. (Exception to the
+      // 400ms cap — line draw is the hero motion; the cap applies to the OTHER
+      // elements which all sit ≤ 400ms.)
+      tl.to("#chartLine",
+        { strokeDashoffset: 0, duration: 0.90, ease: E_STANDARD },
+        0.85
+      );
+
+      // 1.78s — End-point dot fades in exactly when the line reaches the
+      // summit, then the glow class snaps on for the bloom punctuation.
+      // Counter rAF reaches $100K in the same beat.
+      tl.to("#chartEnd",
+        { opacity: 1, duration: 0.32, ease: E_DECELERATE },
+        1.78
+      );
+      tl.add(() => {
+        document.getElementById("counter").classList.add("glow-on");
+        document.getElementById("chartEnd").classList.add("glow");
+      }, 1.85);
+
+      window.__timelines["main"] = tl;
+
+      // ---- rAF number counter, paced to coincide with the line drawing ----
+      const counterEl = document.getElementById("counter");
+      const target = parseInt(counterEl.dataset.target || "100", 10);
+      // Counter rolls in the SAME window as the chart line draws (0.85 → 1.85).
+      const COUNT_START = 0.85;
+      const COUNT_END   = 1.85;
+
+      function decelerate(t) { return 1 - Math.pow(1 - t, 1.8); }
+      function paintCounter() {
+        const t = (window.__timelines.main && window.__timelines.main.time)
+          ? window.__timelines.main.time()
+          : 0;
+        const u = Math.min(1, Math.max(0, (t - COUNT_START) / (COUNT_END - COUNT_START)));
+        const v = decelerate(u);
+        const value = Math.round(target * v);
+        counterEl.textContent = "$" + value + "K";
+      }
+
+      window.addEventListener("hf-seek", paintCounter);
+      paintCounter();
+    </script>
+  </body>
+</html>

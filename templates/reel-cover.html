@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@600&family=Poppins:wght@700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #000; color: #fff; font-family: "Inter", sans-serif; -webkit-font-smoothing: antialiased; }
+  .cover {
+    width: 1080px; height: 1920px;
+    position: relative; overflow: hidden;
+    background: #000;
+  }
+
+  /* Video-frame background — only renders when BACKGROUND_IMAGE_URL is set. */
+  .bg {
+    position: absolute; inset: 0;
+    background-size: cover;
+    background-position: center;
+    /* Slight desaturation + a touch of blur so the foreground text reads
+       cleanly. Tune cautiously — too much blur and it looks like a fail. */
+    filter: saturate(0.85) contrast(1.05);
+  }
+  /* No-frame fallback: subtle dark gradient so the layout still works
+     even if the container failed to extract a frame. */
+  .bg-fallback {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, #111 0%, #222 100%);
+  }
+
+  /* Black overlay: dark at top + bottom for text legibility,
+     slightly transparent in the middle so the frame still shows. */
+  .overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(0,0,0,0.82) 0%,
+      rgba(0,0,0,0.45) 35%,
+      rgba(0,0,0,0.45) 55%,
+      rgba(0,0,0,0.88) 100%
+    );
+  }
+
+  .content {
+    position: relative; z-index: 2;
+    height: 100%; box-sizing: border-box;
+    padding: 140px 80px;
+    display: flex; flex-direction: column; justify-content: flex-end;
+  }
+  .eyebrow {
+    font-family: "Poppins", sans-serif; font-weight: 700;
+    font-size: 36px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: #f8d380;
+    margin-bottom: 40px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.7);
+  }
+  .headline {
+    font-family: "Archivo Black", sans-serif;
+    font-size: 168px; line-height: 0.94;
+    text-transform: uppercase; margin: 0 0 96px;
+    max-width: 920px;
+    text-shadow: 0 4px 24px rgba(0,0,0,0.65);
+  }
+  .accent { color: #f8d380; }
+
+  .corner {
+    position: absolute; bottom: 80px; left: 80px; right: 80px;
+    z-index: 3;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: "Poppins", sans-serif; font-weight: 700;
+    font-size: 30px; letter-spacing: 0.12em; text-transform: uppercase;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+  }
+  .corner .brand { color: rgba(255,255,255,0.65); }
+  .corner .tag   { color: #f8d380; }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="bg-fallback"></div>
+  <!-- IF BACKGROUND_IMAGE_URL -->
+  <div class="bg" style="background-image: url('{{ BACKGROUND_IMAGE_URL }}')"></div>
+  <!-- END BACKGROUND_IMAGE_URL -->
+  <div class="overlay"></div>
+
+  <div class="content">
+    <div class="eyebrow">{{ EYEBROW }}</div>
+    <h1 class="headline">{{ HEADLINE_PRE }} <span class="accent">{{ HEADLINE_ACCENT }}</span> {{ HEADLINE_POST }}</h1>
+  </div>
+
+  <div class="corner">
+    <div class="brand">{{ BRAND_HANDLE }}</div>
+  </div>
+</div>
+</body>
+</html>

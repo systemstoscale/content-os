@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Quote Post</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@500;600&family=Poppins:wght@700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #222; color: #fff; font-family: "Inter", sans-serif; }
+  .post {
+    width: 1080px;
+    height: 1080px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 96px;
+    box-sizing: border-box;
+  }
+  .manifesto {
+    font-family: "Archivo Black", sans-serif;
+    font-size: 96px;
+    line-height: 1.1;
+    text-transform: uppercase;
+    margin: 0;
+    max-width: 920px;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-break: keep-all;
+  }
+  .attribution {
+    margin-top: 56px;
+    font-family: "Poppins", sans-serif;
+    font-weight: 700;
+    font-size: 26px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #f8d380;
+  }
+</style>
+</head>
+<body>
+<div class="post">
+  <h1 class="manifesto">{{ QUOTE }}</h1>
+  <div class="attribution">{{ ATTRIBUTION }}</div>
+</div>
+</body>
+</html>

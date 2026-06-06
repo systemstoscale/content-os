@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      /* Brand: Archivo Black 900 display / Poppins 700 sub-display /
+         Inter 400-600 body. Card radius 8px, hairline border `#3a3a3a`. */
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: transparent;
+        font-family: "Inter", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        color: #ffffff;
+      }
+
+      /* Card anchored to BOTTOM (y=1700). Network needs the hex room so
+         min-height ~620px keeps the 7 nodes laid out properly. */
+      .card {
+        position: absolute;
+        left: 80px;
+        right: 80px;
+        bottom: 220px;
+        height: auto;
+        min-height: 620px;
+        max-height: 680px;
+        padding: 38px 48px 30px;
+        background: rgba(34, 34, 34, 0.88);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(40px);
+      }
+
+      .label {
+        font-family: "Poppins", system-ui, sans-serif;  /* Sub-display 700 */
+        text-align: center;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.20em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.65);
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      .footer {
+        font-family: "Inter", system-ui, sans-serif;  /* Body 500 */
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 26px;
+        text-align: center;
+        font-size: 28px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.7);
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      .footer .gold-text { color: #f8d380; font-weight: 600; }
+
+      /* Network arena — full card width inside padding, tall enough for hex */
+      .network {
+        position: absolute;
+        left: 48px;
+        right: 48px;
+        top: 90px;
+        bottom: 90px;
+      }
+
+      /* SVG sits behind nodes, owns the spoke lines */
+      .network svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+      .spoke {
+        fill: none;
+        stroke: rgba(248, 211, 128, 0.55);
+        stroke-width: 2.5;
+        stroke-linecap: round;
+        stroke-dasharray: 220;
+        stroke-dashoffset: 220;
+        filter: drop-shadow(0 0 4px rgba(248, 211, 128, 0.30));
+      }
+
+      /* Nodes — HTML divs (not SVG) so GSAP transforms behave predictably.
+         IMPORTANT: NO `transform` here. GSAP's animate `y: 0` would clobber
+         a CSS `translate(-50%, -50%)` and slide the node off its anchor.
+         We set xPercent/yPercent via gsap.set() at script start so all
+         transform composition happens through GSAP. */
+      .node {
+        font-family: "Archivo Black", system-ui, sans-serif;  /* Display 900 */
+        position: absolute;
+        width: 96px;
+        height: 96px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 44px;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: -0.01em;
+        background: rgba(34, 34, 34, 0.95);
+        border: 2px solid rgba(248, 211, 128, 0.55);
+        color: #ffffff;
+        opacity: 0;
+      }
+      .node.hub {
+        width: 116px;
+        height: 116px;
+        font-size: 56px;
+        background: #f8d380;
+        color: #222222;     /* Brand: text on light = #222 */
+        border: none;
+        font-weight: 900;
+      }
+      .network.lit .node {
+        border-color: rgba(248, 211, 128, 0.85);
+      }
+      .network.lit .node.hub {
+        filter:
+          drop-shadow(0 0 10px rgba(248, 211, 128, 0.55))
+          drop-shadow(0 0 22px rgba(248, 211, 128, 0.30))
+          drop-shadow(0 0 44px rgba(248, 211, 128, 0.15));
+      }
+
+      /* Hex layout coordinates (% of the .network container).
+         Each node is 96px (≈19% of 500px tall network → half = 9.6%).
+         Pulled inward (14%–86% range) so node bounds never bleed past
+         the network area or collide with the footer. */
+      .node[data-pos="hub"]   { left: 50%;  top: 50%; }
+      .node[data-pos="C"]     { left: 50%;  top: 14%; }
+      .node[data-pos="A"]     { left: 86%;  top: 32%; }
+      .node[data-pos="L"]     { left: 86%;  top: 68%; }
+      .node[data-pos="I"]     { left: 50%;  top: 86%; }
+      .node[data-pos="N"]     { left: 14%;  top: 68%; }
+      .node[data-pos="G"]     { left: 14%;  top: 32%; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="4"
+      data-width="1080"
+      data-height="1920"
+    >
+      <div class="card clip" id="card" data-start="0" data-duration="4" data-track-index="1">
+        <div class="label" id="label">7 SCALING Systems</div>
+
+        <div class="network" id="network">
+          <!--
+            Spokes from the central S hub to each outer node.
+            The .network is 824×500 (effectively); we hard-code line endpoints
+            in viewBox coordinates so the spoke draws are deterministic.
+          -->
+          <svg viewBox="0 0 824 500" preserveAspectRatio="none" aria-hidden="true">
+            <!-- Spokes: hub center (412, 250) → outer node centers -->
+            <line class="spoke" id="spoke-C" x1="412" y1="250" x2="412" y2="40"  />
+            <line class="spoke" id="spoke-A" x1="412" y1="250" x2="708" y2="150" />
+            <line class="spoke" id="spoke-L" x1="412" y1="250" x2="708" y2="350" />
+            <line class="spoke" id="spoke-I" x1="412" y1="250" x2="412" y2="460" />
+            <line class="spoke" id="spoke-N" x1="412" y1="250" x2="116" y2="350" />
+            <line class="spoke" id="spoke-G" x1="412" y1="250" x2="116" y2="150" />
+          </svg>
+
+          <!-- Nodes layered above the SVG -->
+          <div class="node hub"      data-pos="hub" id="node-S">S</div>
+          <div class="node"          data-pos="C"   id="node-C">C</div>
+          <div class="node"          data-pos="A"   id="node-A">A</div>
+          <div class="node"          data-pos="L"   id="node-L">L</div>
+          <div class="node"          data-pos="I"   id="node-I">I</div>
+          <div class="node"          data-pos="N"   id="node-N">N</div>
+          <div class="node"          data-pos="G"   id="node-G">G</div>
+        </div>
+
+        <div class="footer" id="footer">
+          One <span class="gold-text">SCALING System</span> per letter.
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const E_DECELERATE = "cubic-bezier(0,0,0.2,1)";
+      const E_STANDARD   = "cubic-bezier(0.4,0,0.2,1)";
+
+      // Lock spoke dasharrays to actual rendered length so each draw is
+      // pixel-clean regardless of viewBox scaling.
+      ["C","A","L","I","N","G"].forEach((k) => {
+        const el = document.getElementById("spoke-" + k);
+        const len = el.getTotalLength();
+        el.style.strokeDasharray = len;
+        el.style.strokeDashoffset = len;
+      });
+
+      // GSAP-managed centering. `xPercent: -50, yPercent: -50` is GSAP's
+      // version of CSS translate(-50%, -50%); composing it here means later
+      // tweens of `y` won't blow away the centering offset.
+      gsap.set(".node", { xPercent: -50, yPercent: -50, y: 12 });
+
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // 0.00s — Card lifts in (380ms — the heavy entrance)
+      tl.to("#card", { opacity: 1, y: 0, duration: 0.38, ease: E_DECELERATE }, 0.0);
+
+      // 0.18s — Header label
+      tl.to("#label", { opacity: 1, y: 0, duration: 0.30, ease: E_DECELERATE }, 0.18);
+
+      // 0.40s — Hub "S" lands first (it's the SMART Offer foundation)
+      tl.to("#node-S", { opacity: 1, y: 0, duration: 0.32, ease: E_DECELERATE }, 0.40);
+
+      // 0.55s — Outer ring lands in S→C→A→L→I→N→G order with 80ms stagger
+      const outerOrder = ["C", "A", "L", "I", "N", "G"];
+      outerOrder.forEach((k, i) => {
+        tl.to("#node-" + k,
+          { opacity: 1, y: 0, duration: 0.30, ease: E_DECELERATE },
+          0.55 + i * 0.08
+        );
+      });
+
+      // 1.10s — Spokes draw from hub to each outer node, same SCALING order,
+      // 60ms stagger between spokes (a touch tighter than the node stagger)
+      outerOrder.forEach((k, i) => {
+        tl.to("#spoke-" + k,
+          { strokeDashoffset: 0, duration: 0.36, ease: E_STANDARD },
+          1.10 + i * 0.06
+        );
+      });
+
+      // 1.85s — Network "lights up": gold border on outer nodes brightens,
+      // hub gets its 3-layer glow. Class-snap, no continuous animation.
+      tl.add(() => {
+        document.getElementById("network").classList.add("lit");
+      }, 1.85);
+
+      // 2.05s — Footer line fades in (the closing thought)
+      tl.to("#footer", { opacity: 1, y: 0, duration: 0.32, ease: E_DECELERATE }, 2.05);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

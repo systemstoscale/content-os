@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@600&family=Poppins:wght@700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #111; color: #fff; font-family: "Inter", sans-serif; -webkit-font-smoothing: antialiased; }
+  .thumb { width: 1280px; height: 720px; position: relative; overflow: hidden; padding: 80px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, #111 0%, #222 100%); }
+  .eyebrow { font-family: "Poppins", sans-serif; font-weight: 700; font-size: 26px; letter-spacing: 0.14em; text-transform: uppercase; color: #f8d380; margin-bottom: 24px; }
+  .headline { font-family: "Archivo Black", sans-serif; font-size: 124px; line-height: 0.94; text-transform: uppercase; margin: 0; max-width: 1100px; }
+  .accent { color: #f8d380; }
+  .corner { position: absolute; bottom: 48px; right: 48px; font-family: "Poppins", sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.55); }
+</style>
+</head>
+<body>
+<div class="thumb">
+  <div class="eyebrow">{{ EYEBROW }}</div>
+  <h1 class="headline">{{ HEADLINE_PRE }} <span class="accent">{{ HEADLINE_ACCENT }}</span> {{ HEADLINE_POST }}</h1>
+  <div class="corner">{{ BRAND_HANDLE }}</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Skalers brand auto-uppercase rule — every .font-display element gets
+ * uppercased and slightly tightened, matching skalers.io/brand. */
+@layer base {
+  html {
+    color-scheme: dark;
+    background: #111;
+    overflow-x: hidden;
+  }
+  body {
+    @apply bg-bg-deep text-white antialiased;
+    font-family: var(--font-inter), system-ui, sans-serif;
+    overflow-x: hidden;
+    /* Native-app feel: no blue tap flash, momentum scroll. */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-overflow-scrolling: touch;
+  }
+  .font-display {
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
+}
+
+/* Safe-area + app-feel utilities. */
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .min-h-safe-screen {
+    min-height: 100svh;
+  }
+  /* Skeleton shimmer for loading states. */
+  @keyframes aos-shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  .animate-shimmer {
+    background: linear-gradient(90deg, #1a1a1a 0%, #262626 50%, #1a1a1a 100%);
+    background-size: 800px 100%;
+    animation: aos-shimmer 1.4s linear infinite;
+  }
+  /* Bottom-sheet slide-up (mobile modals). */
+  @keyframes aos-slide-up {
+    from { transform: translateY(8%); opacity: 0.6; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .animate-slide-up {
+    animation: aos-slide-up 0.2s ease-out;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-slide-up,
+    .animate-shimmer {
+      animation: none;
+    }
+  }
+}
+
+/* Subtle scrollbar — dark surfaces benefit from a quiet thumb. */
+@layer utilities {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #111;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #444;
+  }
+}

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=Poppins:wght@700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #222; color: #fff; font-family: "Inter", sans-serif; -webkit-font-smoothing: antialiased; }
+  .slide { width: 1080px; height: 1350px; padding: 72px 80px; box-sizing: border-box; display: flex; flex-direction: column; gap: 28px; }
+
+  .eyebrow { font-family: "Poppins", sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 0.12em; text-transform: uppercase; color: #f8d380; }
+
+  .top { display: flex; align-items: flex-start; gap: 28px; }
+  .index {
+    font-family: "Archivo Black", sans-serif;
+    font-size: 168px; line-height: 0.86; color: #f8d380;
+    flex-shrink: 0; min-width: 200px;
+  }
+  .headline-wrap { padding-top: 18px; }
+  .headline {
+    font-family: "Archivo Black", sans-serif;
+    font-size: 76px; line-height: 1.02; text-transform: uppercase; margin: 0;
+  }
+
+  .body {
+    font-size: 34px; line-height: 1.36; font-weight: 500;
+    color: rgba(255,255,255,0.92); max-width: 920px;
+  }
+
+  .bullets { display: flex; flex-direction: column; gap: 18px; margin-top: 8px; }
+  .bullet {
+    display: flex; gap: 22px; align-items: flex-start;
+    font-size: 30px; line-height: 1.32; font-weight: 500;
+    color: rgba(255,255,255,0.94);
+  }
+  .bullet .dot {
+    flex-shrink: 0; width: 16px; height: 16px;
+    border-radius: 50%; background: #f8d380; margin-top: 14px;
+  }
+  .bullet b { color: #f8d380; font-weight: 700; }
+
+  .takeaway {
+    margin-top: auto;
+    padding: 28px 32px;
+    border-left: 6px solid #f8d380;
+    background: rgba(248, 211, 128, 0.08);
+    font-family: "Poppins", sans-serif; font-weight: 700;
+    font-size: 28px; line-height: 1.32; color: #fff;
+  }
+  .takeaway-label {
+    display: block; font-size: 18px; letter-spacing: 0.15em;
+    text-transform: uppercase; color: #f8d380; margin-bottom: 8px;
+  }
+
+  .footer {
+    margin-top: auto; display: flex; justify-content: space-between; align-items: center;
+    font-family: "Poppins", sans-serif; font-weight: 700; font-size: 22px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.5);
+    padding-top: 32px;
+  }
+  .footer .progress { color: #f8d380; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <!-- IF EYEBROW --><div class="eyebrow">{{ EYEBROW }}</div><!-- END EYEBROW -->
+
+  <div class="top">
+    <div class="index">{{ INDEX }}</div>
+    <div class="headline-wrap">
+      <h2 class="headline">{{ HEADLINE }}</h2>
+    </div>
+  </div>
+
+  <div class="body">{{ BODY }}</div>
+
+  <div class="bullets">
+    <!-- IF BULLET_1 --><div class="bullet"><span class="dot"></span><div>{{ BULLET_1 }}</div></div><!-- END BULLET_1 -->
+    <!-- IF BULLET_2 --><div class="bullet"><span class="dot"></span><div>{{ BULLET_2 }}</div></div><!-- END BULLET_2 -->
+    <!-- IF BULLET_3 --><div class="bullet"><span class="dot"></span><div>{{ BULLET_3 }}</div></div><!-- END BULLET_3 -->
+  </div>
+
+  <!-- IF TAKEAWAY -->
+  <div class="takeaway">
+    <span class="takeaway-label">The takeaway</span>
+    {{ TAKEAWAY }}
+  </div>
+  <!-- END TAKEAWAY -->
+
+  <div class="footer">
+    <div>{{ BRAND_HANDLE }}</div>
+    <div class="progress">{{ PROGRESS }}</div>
+  </div>
+</div>
+</body>
+</html>
