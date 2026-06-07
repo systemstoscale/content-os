@@ -13,7 +13,7 @@ minutes. Have a second browser tab open for grabbing keys.
 
 ---
 
-## Step 1 — Accept your GitHub invite
+## Step 1: Accept your GitHub invite
 
 After you buy, we email you a GitHub invitation to the private Content OS repo.
 
@@ -21,7 +21,7 @@ After you buy, we email you a GitHub invitation to the private Content OS repo.
    `https://github.com/systemstoscale/content-os/invitations`).
 2. Click **Accept invitation**. Done. You now have access.
 
-## Step 2 — Click "Deploy to Cloudflare"
+## Step 2: Click "Deploy to Cloudflare"
 
 1. Go to the repo's README and click the **Deploy to Cloudflare** button (or use
    this link): `https://deploy.workers.cloudflare.com/?url=https://github.com/systemstoscale/content-os`
@@ -32,34 +32,35 @@ After you buy, we email you a GitHub invitation to the private Content OS repo.
 4. Wait for the build to finish (a few minutes). When it is done you get a URL
    like `https://content-os.<you>.workers.dev`. Keep that tab open.
 
-## Step 3 — Get your keys (copy each one)
+## Step 3: Get your keys (copy each one)
 
 Open each link, create the key, and paste it somewhere temporary (a notes app).
 You will add them to Cloudflare in Step 4.
 
-1. **Anthropic (Claude)** — powers the editing + captions.
-   Go to `https://console.anthropic.com/settings/keys` → **Create Key** → copy it
+1. **Anthropic (Claude)**: powers the editing + captions.
+   No account yet? Create one at `https://skalers.io/claude`. Then go to
+   `https://console.anthropic.com/settings/keys` → **Create Key** → copy it
    (starts with `sk-ant-`).
-2. **Groq** — does the transcription (free).
+2. **Groq**: does the transcription (free).
    Go to `https://console.groq.com/keys` → **Create API Key** → copy it (starts
    with `gsk_`).
-3. **Zernio** — publishes to your platforms. (`getlate.dev`)
+3. **Zernio**: publishes to your platforms. (`getlate.dev`)
    Sign up, then **Settings → API** → copy your **API key**. Then connect your
    Instagram / TikTok / YouTube / Facebook / LinkedIn accounts in Zernio. Note
    your **Profile ID** (in the URL or profile settings).
-4. **Cloudflare R2 token** — lets the editor save finished reels.
+4. **Cloudflare R2 token**: lets the editor save finished reels.
    In your Cloudflare dashboard: **R2 → Manage R2 API Tokens → Create API Token**
    → permission **Object Read & Write** → **Create**. Copy the **Access Key ID**
    and **Secret Access Key**. Also copy your **Account ID** (Workers & Pages →
    right sidebar).
-5. **Telegram bot** — how you talk to it.
+5. **Telegram bot**: how you talk to it.
    In Telegram, open **@BotFather** → send `/newbot` → pick a name → copy the
    **bot token** it gives you (looks like `1234:ABC...`).
 
 Optional (skip for now if you want): **KIE.AI** key (AI thumbnails) and
 **ElevenLabs** key (voice for AI avatar reels).
 
-## Step 4 — Paste your keys into Cloudflare
+## Step 4: Paste your keys into Cloudflare
 
 1. In Cloudflare, go to **Workers & Pages → content-os → Settings → Variables and
    Secrets**.
@@ -79,7 +80,7 @@ Optional (skip for now if you want): **KIE.AI** key (AI thumbnails) and
 
 3. Click **Deploy** (top right) so the new secrets take effect.
 
-## Step 5 — Finish setup
+## Step 5: Finish setup
 
 1. Open your worker URL (from Step 2) and complete the short **/setup** screen
    (your name, timezone, email). It gives you a login.
@@ -88,13 +89,13 @@ Optional (skip for now if you want): **KIE.AI** key (AI thumbnails) and
    `{"instagram":{"accountId":"..."},"tiktok":{"accountId":"..."}}`
    into the `ZERNIO_ACCOUNTS` config field.
 
-## Step 6 — Pair Telegram + brand it
+## Step 6: Pair Telegram + brand it
 
 1. Open your bot in Telegram and send `/start` to pair it to you.
 2. Send `/brand` and pick your fonts, colors, caption style, motion style, and
    thumbnail look. You get live previews.
 
-## Step 7 — Make your first reel 🎬
+## Step 7: Make your first reel 🎬
 
 Record a short talking-head clip on your phone and send it to your bot. Pick
 **Talking head → Captions + motion graphics**. In a few minutes you get a
