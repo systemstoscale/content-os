@@ -44,6 +44,8 @@ Every change writes `CONFIG.BRAND_PROFILE` and previews live in chat. Defaults r
 
 ## Install (one click)
 
+> **New here? Follow [SETUP.md](SETUP.md) for the full click-by-click walkthrough** (accept invite → deploy → grab your keys → paste them in → first reel, about 15 minutes). The summary below assumes you are comfortable with the Cloudflare dashboard.
+
 Click **Deploy to Cloudflare** above. Cloudflare forks this repo into your GitHub, provisions your D1 + KV + R2 + Worker + container, applies migrations, and builds the UI. Then add your keys (Worker → Settings → Variables, or `wrangler secret put`):
 
 **Required**
