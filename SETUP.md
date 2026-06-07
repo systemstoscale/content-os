@@ -38,9 +38,10 @@ Open each link, create the key, and paste it somewhere temporary (a notes app).
 You will add them to Cloudflare in Step 4.
 
 1. **Anthropic (Claude)**: powers the editing + captions.
-   No account yet? Create one at `https://skalers.io/claude`. Then go to
-   `https://console.anthropic.com/settings/keys` → **Create Key** → copy it
-   (starts with `sk-ant-`).
+   These are the tools I actually run across my businesses:
+   `https://skalers.io/dashboard/scaling-overview?panel=tools`. Sign up for
+   Anthropic there, then go to `https://console.anthropic.com/settings/keys` →
+   **Create Key** → copy it (starts with `sk-ant-`).
 2. **Groq**: does the transcription (free).
    Go to `https://console.groq.com/keys` → **Create API Key** → copy it (starts
    with `gsk_`).
