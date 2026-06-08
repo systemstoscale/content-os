@@ -88,7 +88,7 @@ the key into your notes.
 3. Docs: [Groq quickstart](https://console.groq.com/docs/quickstart).
 
 ### 3.3 Zernio (getlate.dev) — required — publishing
-1. **Create an account:** [getlate.dev](https://getlate.dev).
+1. **Create an account:** [skalers.io/zernio](https://skalers.io/zernio).
 2. **Connect your platforms** inside Zernio: Instagram, TikTok, YouTube,
    Facebook, LinkedIn (whichever you post to).
 3. **Get the key + profile id:** **Settings → API** → copy your **API key**, and
@@ -120,7 +120,7 @@ Skip this unless you want AI-generated thumbnails or AI-avatar reels.
 Only needed if you want **faceless / AI-avatar reels**. ElevenLabs makes the
 voice; KIE makes the talking face. If you only post talking-head reels you
 filmed yourself, you don't need this at all.
-1. **Create an account:** [elevenlabs.io](https://elevenlabs.io).
+1. **Create an account:** [skalers.io/elevenlabs](https://skalers.io/elevenlabs).
 2. **Get the key:** **Profile → API Keys** → copy it.
 3. Docs: [ElevenLabs docs](https://elevenlabs.io/docs).
 
