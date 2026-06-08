@@ -2,7 +2,7 @@
 
 > Record a video, get a finished captioned reel, publish it everywhere — from Telegram. Runs entirely on your own Cloudflare account.
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/systemstoscale/content-os)
+**Install:** [Use this template](https://github.com/systemstoscale/content-os/generate) to make your own private copy, then in Cloudflare go to **Workers & Pages → Create → Import a repository** and pick your copy. Full walkthrough in [SETUP.md](SETUP.md). (Cloudflare's one-click "Deploy" button is public-repos-only, so private installs import their own copy.)
 
 ## What is this?
 
@@ -42,11 +42,11 @@ Every change writes `CONFIG.BRAND_PROFILE` and previews live in chat. Defaults r
 - **Asset library** — drop a `logo:` / `meme:` / `sound:` attachment → indexed in R2 for the agent to pull into edits.
 - **Web dashboard** — posting calendar, drafts, analytics, settings.
 
-## Install (one click)
+## Install
 
-> **New here? Follow [SETUP.md](SETUP.md) for the full click-by-click walkthrough** (accept invite → deploy → grab your keys → paste them in → first reel, about 15 minutes). The summary below assumes you are comfortable with the Cloudflare dashboard.
+> **New here? Follow [SETUP.md](SETUP.md) for the full click-by-click walkthrough** (accept invite → make your copy → import to Cloudflare → grab your keys → first reel, about 15-20 minutes). The summary below assumes you are comfortable with the Cloudflare dashboard.
 
-Click **Deploy to Cloudflare** above. Cloudflare forks this repo into your GitHub, provisions your D1 + KV + R2 + Worker + container, applies migrations, and builds the UI. Then add your keys (Worker → Settings → Variables, or `wrangler secret put`):
+[Use this template](https://github.com/systemstoscale/content-os/generate) to create your own **private** copy, then in Cloudflare open **Workers & Pages → Create → Import a repository** and select your copy. Cloudflare provisions your D1 + KV + R2 + Worker + container, applies migrations, and builds the UI. Then add your keys (Worker → Settings → Variables, or `wrangler secret put`):
 
 **Required**
 - `ANTHROPIC_API_KEY` — Claude (the agent + captions + b-roll planning)

@@ -35,37 +35,42 @@ as you go; you'll add them all to Cloudflare in Step 4.
 
 ---
 
-## Step 1: Create a GitHub account + accept your invite
+## Step 1: Get GitHub + your own copy of the code
 
-GitHub stores your own copy of the Content OS code.
+GitHub stores your own copy of the Content OS code, which you deploy from.
 
 **Don't have GitHub yet?**
 1. Go to [github.com/signup](https://github.com/signup).
 2. Enter your email, a password, and a username, then verify your email.
 3. Official guide: [Creating an account on GitHub](https://docs.github.com/en/get-started/start-your-journey/creating-an-account-on-github).
 
-**Accept your invite** (we send it to your GitHub email after you buy):
-1. Open the email from GitHub and click **View invitation**, or go to
-   [github.com/systemstoscale/content-os/invitations](https://github.com/systemstoscale/content-os/invitations).
-2. Click **Accept invitation**. Done, you now have access.
+**Accept your invite, then make your own copy:**
+1. Open the GitHub email and click **View invitation** (or go to
+   [github.com/systemstoscale/content-os/invitations](https://github.com/systemstoscale/content-os/invitations)) → **Accept invitation**.
+2. Make your own copy: go to
+   [github.com/systemstoscale/content-os/generate](https://github.com/systemstoscale/content-os/generate)
+   (or click **Use this template → Create a new repository**), name it `content-os`,
+   keep it **Private**, and create it.
+3. You now own `github.com/<you>/content-os` — your private copy to deploy from.
 
-## Step 2: Create a Cloudflare account + one-click deploy
+## Step 2: Deploy your copy to Cloudflare
 
-Cloudflare is where Content OS actually runs. It's free to start.
+Cloudflare is where Content OS runs. It's free to start.
 
 **Don't have Cloudflare yet?**
-1. Go to [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up).
-2. Enter your email + a password and verify your email.
-3. Official guide: [Create a Cloudflare account](https://developers.cloudflare.com/fundamentals/setup/account/create-account/).
+1. Go to [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up) and verify your email.
+2. Official guide: [Create a Cloudflare account](https://developers.cloudflare.com/fundamentals/setup/account/create-account/).
 
-**Deploy Content OS:**
-1. Click **Deploy to Cloudflare** (in the repo README), or use this link:
-   [deploy.workers.cloudflare.com/?url=...content-os](https://deploy.workers.cloudflare.com/?url=https://github.com/systemstoscale/content-os).
-2. Sign in to Cloudflare and approve the GitHub connection.
-3. Cloudflare copies the project into your GitHub and provisions everything
-   (your database, storage, and worker) in your account.
-4. Wait for the build to finish (a few minutes). You'll get a URL like
-   `https://content-os.<you>.workers.dev`. Keep that tab open.
+**Import + deploy:**
+1. In Cloudflare, go to **Workers & Pages → Create → Import a repository**
+   ([direct link](https://dash.cloudflare.com/?to=/:account/workers-and-pages/create)).
+2. Connect your GitHub and pick **your copy** (`<you>/content-os`).
+3. Click **Deploy**. Cloudflare builds it and provisions your database, storage,
+   and worker. Wait a few minutes for a URL like `https://content-os.<you>.workers.dev`.
+   Keep that tab open.
+
+> Cloudflare's one-click "Deploy to Cloudflare" button only works with public
+> repos. Content OS is private (it's yours), so you import your own copy as above.
 
 ## Step 3: Create each service account + grab its key
 
