@@ -6,6 +6,7 @@ import { publishDraftById, rejectDraft } from "../tools/drafts";
 import { draftGlyph, formatGlyph } from "../lib/labels";
 import { shortPid } from "./reel-ui";
 import { handleBrandCommand } from "./brand-wizard";
+import { configStatus, statusMessage } from "../lib/config-check";
 
 const HELP = `🤖 *Content OS Bot*
 
@@ -27,6 +28,7 @@ Drop a video (or paste an R2 link) and pick a format. I edit, caption, and thumb
 \`/model\` — view or switch your AI model (haiku/sonnet/opus)
 \`/sessions\` — last 5 agent runs with status + tool-call count
 \`/status\` — token usage stats for this chat
+\`/health\` — check every API key is set + you're ready to render
 \`/new\`, \`/reset\` — clear conversation memory and start fresh
 \`/help\` — this message
 
@@ -73,6 +75,13 @@ export async function handleCommand(
           { parse_mode: "Markdown" }
         );
       }
+      return true;
+    }
+
+    case "/health":
+    case "/config": {
+      const s = await configStatus(env);
+      await tgSendMessage(env, chat_id, statusMessage(s), { parse_mode: "HTML" });
       return true;
     }
 

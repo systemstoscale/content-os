@@ -1,12 +1,30 @@
 import type { Env } from "../env";
 import { requireBearer } from "../api/auth";
 import { getReelProject, updateReelProject } from "../db";
+import { missingReelKeys, reelConfigHint } from "../lib/config-check";
+import { tgSendMessage } from "../telegram/api";
 
 /** Start the reel render workflow for an existing reel_projects row, mark the
  *  row `editing`, and stash the workflow instance id. Shared by the Telegram
  *  ingest (full-edit / raw / b-roll), the Re-render button, and the
- *  /trigger/reel HTTP entrypoint. Returns the workflow instance id. */
+ *  /trigger/reel HTTP entrypoint. Returns the workflow instance id, or "" if the
+ *  install isn't configured to render yet (the buyer gets a clear Telegram hint). */
 export async function startReelRender(env: Env, projectId: string): Promise<string> {
+  // Pre-flight: a missing key here would otherwise surface as a cryptic
+  // container failure minutes later. Fail fast with a plain-language message.
+  const missing = missingReelKeys(env);
+  if (missing.length) {
+    const project = await getReelProject(env, projectId);
+    if (project?.telegram_chat_id) {
+      await tgSendMessage(env, Number(project.telegram_chat_id), reelConfigHint(missing)).catch(() => {});
+    }
+    await updateReelProject(env, projectId, {
+      status: "failed",
+      error_message: `not configured: ${missing.join("; ")}`,
+    });
+    return "";
+  }
+
   const instance = await env.REEL_RENDER_WORKFLOW.create({ params: { project_id: projectId } });
   await updateReelProject(env, projectId, {
     status: "editing",

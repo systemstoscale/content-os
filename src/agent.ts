@@ -63,6 +63,15 @@ export interface AgentResult {
 
 export async function runSession(env: Env, brief: AgentBrief): Promise<AgentResult> {
   const sessionId = `ses_${crypto.randomUUID().slice(0, 8)}`;
+  if (!env.ANTHROPIC_API_KEY) {
+    return {
+      sessionId,
+      finalText: "",
+      toolCalls: [],
+      error:
+        "ANTHROPIC_API_KEY isn't set yet. Add it in Cloudflare → Workers & Pages → content-os → Settings → Variables and Secrets, then click Deploy. Send /status to check what's configured.",
+    };
+  }
   const client = new Anthropic({
     apiKey: env.ANTHROPIC_API_KEY,
     defaultHeaders: { "anthropic-beta": BETA_HEADER },

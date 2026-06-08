@@ -180,7 +180,8 @@ async function processMessage(env: Env, chat_id: number, msg: TgMessage): Promis
         await stage(`transcript="${transcript.slice(0, 60)}"`);
         if (transcript) blocks.push({ type: "text", text: `[voice transcript] ${transcript}` });
       } catch (e) {
-        await tgSendMessage(env, chat_id, `voice transcription failed: ${e}`);
+        console.error("voice transcription failed", e);
+        await tgSendMessage(env, chat_id, "I couldn't transcribe that voice note. Please try again, or send your idea as text.");
         return;
       }
     }

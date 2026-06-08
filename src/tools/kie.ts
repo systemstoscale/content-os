@@ -1,6 +1,7 @@
 import type { Env } from "../env";
 import { logApiCost } from "../lib/cost-tracking";
 import { DEFAULT_IMAGE_MODEL, getMediaConfig, withCreatorLook } from "../lib/media-config";
+import { r2PublicUrl } from "../lib/r2-url";
 
 /** KIE.AI image generation (Worker-side).
  *
@@ -66,11 +67,10 @@ function apiKey(env: Env): string {
 }
 
 async function publicUrlFor(env: Env, r2_key: string): Promise<string> {
-  const base = await env.CONFIG.get("R2_PUBLIC_BASE");
-  if (base) return `${base.replace(/\/$/, "")}/${r2_key}`;
-  // Same fallback hostname the rest of the app uses so public URLs resolve
-  // identically regardless of which tool produced the asset.
-  return `https://content-os.admin-2ab.workers.dev/r2/${r2_key}`;
+  // Route through this Worker's own /r2/ origin (R2_PUBLIC_BASE || WORKER_URL).
+  // Never hardcode a host — every Deploy-button buyer runs on their own
+  // subdomain, so a hardcoded operator host would 404 their generated images.
+  return r2PublicUrl(env, r2_key);
 }
 
 /** Rough nano-banana-pro spend so the daily cap accounts for image gen. */
