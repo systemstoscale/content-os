@@ -3,7 +3,7 @@ import type { Env } from "./env";
 import { buildSystemPrompt } from "./prompts/system";
 import { TOOL_SCHEMAS, dispatchTool } from "./tools";
 import { logSession } from "./db";
-import { logAnthropicCost } from "./lib/cost-tracking";
+import { logAnthropicCost, getDailySpend } from "./lib/cost-tracking";
 import { getAgentModel } from "./lib/model";
 
 // `managed-agents` is what enables our long tool-use loop. `mcp-client` is
@@ -72,6 +72,19 @@ export async function runSession(env: Env, brief: AgentBrief): Promise<AgentResu
         "ANTHROPIC_API_KEY isn't set yet. Add it in Cloudflare → Workers & Pages → content-os → Settings → Variables and Secrets, then click Deploy. Send /status to check what's configured.",
     };
   }
+
+  // Daily spend cap — a runaway autopilot must never quietly burn the buyer's
+  // API budget. Refuse new sessions once the 24h spend is at/over their cap.
+  const spend = await getDailySpend(env);
+  if (spend.over_cap) {
+    return {
+      sessionId,
+      finalText: "",
+      toolCalls: [],
+      error: `Daily AI spend cap reached ($${spend.spent_usd.toFixed(2)} of $${spend.cap_usd.toFixed(2)}). Raise it by setting DAILY_SPEND_CAP_USD in Cloudflare Settings, or wait for the 24h window to roll off.`,
+    };
+  }
+
   const client = new Anthropic({
     apiKey: env.ANTHROPIC_API_KEY,
     defaultHeaders: { "anthropic-beta": BETA_HEADER },

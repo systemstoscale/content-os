@@ -76,7 +76,7 @@ export async function handleReelIngest(env: Env, chatId: number, msg: ReelIngest
     await tgSendMessage(
       env,
       chatId,
-      "That clip is over 20 MB — past Telegram's bot download limit. Use the iPhone Shortcut to upload it to R2, then paste the link here.",
+      "That clip is over 20 MB — Telegram's download limit for bots. Send a shorter clip, or paste a direct video link (e.g. from your R2 bucket, or the iPhone Shortcut if you've set one up).",
     );
     return;
   }

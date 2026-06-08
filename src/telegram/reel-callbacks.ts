@@ -239,6 +239,13 @@ async function handleRerender(
     await tgAnswerCallbackQuery(env, cq.id, "No source");
     return;
   }
+  // Don't re-render a live reel — it would unlink the published post and orphan
+  // its zernio_post_id. Make a new version by sending the clip again instead.
+  if (project.status === "published") {
+    await tgAnswerCallbackQuery(env, cq.id, "Already published");
+    await tgSendMessage(env, chatId, "That reel is already published, so re-rendering is off to avoid unlinking the live post. Send the clip again to make a fresh version.");
+    return;
+  }
   await tgAnswerCallbackQuery(env, cq.id, "Re-rendering…");
   await tgEditMessageText(env, chatId, messageId, `🔁 Re-rendering reel \`${shortPid(pid)}\`…`);
   // startReelRender re-uses the row's stored format / topic / key_points.

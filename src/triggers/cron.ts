@@ -17,8 +17,20 @@ export async function handleCron(event: ScheduledEvent, env: Env): Promise<void>
     await runDueReels(env);
     return;
   }
-  // 07:00 UTC daily content brief.
+  // 07:00 UTC daily: prune the Telegram dedupe ledger (else it grows forever),
+  // then run the content brief.
+  await pruneOldRows(env);
   await runDailyContentBrief(env);
+}
+
+/** Keep operational tables from growing unbounded. Best-effort. */
+async function pruneOldRows(env: Env): Promise<void> {
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  try {
+    await env.DB.prepare("DELETE FROM tg_seen_updates WHERE seen_at < ?").bind(cutoff).run();
+  } catch (e) {
+    console.warn("pruneOldRows failed:", String(e).slice(0, 160));
+  }
 }
 
 async function runDailyContentBrief(env: Env): Promise<void> {

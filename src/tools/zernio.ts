@@ -116,7 +116,9 @@ export async function zernioPublish(
   const text = await res.text();
   // Zernio sometimes returns 207 Multi-Status when the post is created but
   // a sub-platform fails or is delayed; treat 200/201/207 as success.
-  if (!res.ok && res.status !== 207) {
+  // 409 means this post already exists (a retry after a transient error) —
+  // treat it as success too so a cron/network retry can never double-publish.
+  if (!res.ok && res.status !== 207 && res.status !== 409) {
     return { ok: false, error: `zernio ${res.status}: ${text.slice(0, 500)}` };
   }
 
