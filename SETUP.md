@@ -87,13 +87,13 @@ the key into your notes.
    **Create API Key** → copy it (starts with `gsk_`).
 3. Docs: [Groq quickstart](https://console.groq.com/docs/quickstart).
 
-### 3.3 Zernio (getlate.dev) — required — publishing
+### 3.3 Zernio (zernio.com) — required — publishing
 1. **Create an account:** [skalers.io/zernio](https://skalers.io/zernio).
 2. **Connect your platforms** inside Zernio: Instagram, TikTok, YouTube,
    Facebook, LinkedIn (whichever you post to).
 3. **Get the key + profile id:** **Settings → API** → copy your **API key**, and
    note your **Profile ID** (in the URL or profile settings).
-4. Docs: [docs.getlate.dev](https://docs.getlate.dev).
+4. Docs: [docs.zernio.com](https://docs.zernio.com).
 
 ### 3.4 Cloudflare R2 — required — storage (uses your Cloudflare from Step 2)
 1. In your Cloudflare dashboard: **R2 → Manage R2 API Tokens → Create API Token**.

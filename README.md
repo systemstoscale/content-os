@@ -6,7 +6,7 @@
 
 ## What is this?
 
-**Content OS turns one recording into published short-form content, automatically.** Drop a video into your Telegram bot (or paste an R2 link), tap a format, and the agent edits it — silence + filler cut, word-synced karaoke captions, cinematic motion-graphic b-roll, a magazine-cover thumbnail, and an auto-written caption — then sends back a preview card. Tap **Publish now / Add to queue / Schedule** to push it to Instagram, TikTok, YouTube Shorts, Facebook Reels, and LinkedIn via [Zernio](https://getlate.dev).
+**Content OS turns one recording into published short-form content, automatically.** Drop a video into your Telegram bot (or paste an R2 link), tap a format, and the agent edits it — silence + filler cut, word-synced karaoke captions, cinematic motion-graphic b-roll, a magazine-cover thumbnail, and an auto-written caption — then sends back a preview card. Tap **Publish now / Add to queue / Schedule** to push it to Instagram, TikTok, YouTube Shorts, Facebook Reels, and LinkedIn via [Zernio](https://zernio.com).
 
 It's the same pipeline that edits reels inside 7-figure founder businesses, packaged so any creator can install it on their own Cloudflare account.
 
@@ -73,7 +73,7 @@ After deploy: open the Worker URL, finish `/setup`, set `CONFIG.ZERNIO_ACCOUNTS`
 | State | D1 (`reel_projects`, `drafts`, `assets`, …) |
 | Storage | R2 (raw clips, finished reels, thumbnails, previews) |
 | Config | KV (`CONFIG.BRAND_PROFILE`, creator profile, connected accounts) |
-| Publishing | Zernio (getlate.dev) across IG / TikTok / YouTube / Facebook / LinkedIn |
+| Publishing | Zernio (zernio.com) across IG / TikTok / YouTube / Facebook / LinkedIn |
 | Control | Telegram bot (ingest, format pick, preview card, `/brand`, `/reels`) + web dashboard |
 
 ## Access
