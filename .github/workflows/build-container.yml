@@ -33,6 +33,7 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
+            skalers/content-os-processor:v1
             skalers/content-os-processor:latest
             skalers/content-os-processor:${{ github.sha }}
           cache-from: type=gha

@@ -93,7 +93,7 @@ new_sqlite_classes = ["Processor"]
 # needed in the buyer's build.
 [[containers]]
 class_name = "Processor"
-image = "docker.io/skalers/content-os-processor:latest"
+image = "docker.io/skalers/content-os-processor:v1"
 max_instances = 5
 instance_type = "standard-4"
 name = "content-os-processor"
