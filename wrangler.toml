@@ -87,18 +87,33 @@ class_name = "ReelRenderWorkflow"
 tag = "v1"
 new_sqlite_classes = ["Processor"]
 
+# Reel-render container. Cloudflare CI has no Docker, so we DON'T build from the
+# Dockerfile here — we reference a PRE-BUILT public image (built + pushed once by
+# .github/workflows/build-container.yml). Cloudflare pulls it at deploy; no Docker
+# needed in the buyer's build.
+[[containers]]
+class_name = "Processor"
+image = "docker.io/skalers/content-os-processor:latest"
+max_instances = 5
+instance_type = "standard-4"
+name = "content-os-processor"
+
+[[durable_objects.bindings]]
+class_name = "Processor"
+name = "PROCESSOR"
+
 # Per-creator config: NO [vars] block. The /setup first-visit wizard inside
 # the Worker captures CREATOR_NAME / CREATOR_TIMEZONE / APPROVAL_EMAIL /
 # ZERNIO_PROFILE_ID etc. and writes them to CONFIG KV. Worker code reads from
 # CONFIG (see src/profile.ts).
 #
-# SECRETS — prompted by the Deploy button form:
-#   ANTHROPIC_API_KEY           (required) — Claude API
-#   ZERNIO_API_KEY              (required) — Zernio publishing + MCP
+# SECRETS — set in Cloudflare → Settings → Variables after deploy (or via the
+# Deploy button form where supported):
+#   CONTENT_OS_LICENSE_KEY      (required) — your key from 10xcontent.io
+#   ANTHROPIC_API_KEY           (required) — Claude API (editing + captions)
+#   GROQ_API_KEY                (required) — transcription
+#   ZERNIO_API_KEY              (required) — Zernio publishing
+#   R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / CLOUDFLARE_ACCOUNT_ID (required) — reel storage
 #   TELEGRAM_BOT_TOKEN          (optional) — Telegram bot
 #   ELEVENLABS_API_KEY          (optional) — voice clone for avatar reels
 #   KIE_AI_API_KEY              (optional) — AI images + avatar reels (KIE.AI)
-#
-# NOTE: the [[containers]] + [[durable_objects.bindings]] blocks (the reel
-# Processor) live in wrangler.toml and are added here when the public deploy
-# repo is wired for the container rollout.

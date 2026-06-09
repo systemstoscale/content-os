@@ -1,16 +1,10 @@
 # Content OS
 
+> Record a video, get a finished captioned reel, publish it everywhere, from Telegram. Runs entirely on your own Cloudflare account.
+
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/systemstoscale/content-os)
 
-**One click** clones this into your own GitHub, provisions your Cloudflare resources (KV / D1 / R2), prompts for your keys, and deploys Content OS to **your** account. You own and can customize the code.
-
----
-
-# Content OS
-
-> Record a video, get a finished captioned reel, publish it everywhere — from Telegram. Runs entirely on your own Cloudflare account.
-
-**Install:** [Use this template](https://github.com/systemstoscale/content-os/generate) to make your own private copy, then in Cloudflare go to **Workers & Pages → Create → Import a repository** and pick your copy. Full walkthrough in [SETUP.md](SETUP.md). (Cloudflare's one-click "Deploy" button is public-repos-only, so private installs import their own copy.)
+**One click** clones this into your own GitHub, provisions your Cloudflare resources (KV / D1 / R2), prompts for your keys, and deploys Content OS to **your** account. You own and can customize the code. Full walkthrough in [SETUP.md](SETUP.md).
 
 ## What is this?
 

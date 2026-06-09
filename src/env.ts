@@ -55,6 +55,9 @@ export interface Env {
   ANTHROPIC_API_KEY: string;
   ZERNIO_API_KEY: string;
   CONTENT_OS_API_TOKEN?: string;
+  /** License key issued at 10xcontent.io on purchase. Open-core gate: render +
+   *  publish require a valid key (validated against the funnel — see lib/license.ts). */
+  CONTENT_OS_LICENSE_KEY?: string;
   /** KIE.AI API key — the single credential behind ALL media generation
    *  (images via nano-banana-pro, talking-head reels via the avatar model).
    *  One Bearer key, no OAuth, no per-buyer model training — set once with
