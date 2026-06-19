@@ -280,7 +280,7 @@ async function telegramStatus(req: Request, env: Env): Promise<Response> {
   const guard = await gateBootstrap(req, env);
   if (guard) return guard;
   const token = await getCredential(env, "TELEGRAM_BOT_TOKEN");
-  const token_set = token.length > 0;
+  const token_set = !!token;
 
   let webhook_registered = false;
   if (token_set) {
