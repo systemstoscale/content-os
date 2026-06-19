@@ -46,22 +46,15 @@ Every change writes `CONFIG.BRAND_PROFILE` and previews live in chat. Defaults r
 
 ## Install
 
-> **New here? Follow [SETUP.md](SETUP.md) for the full click-by-click walkthrough** (accept invite → make your copy → import to Cloudflare → grab your keys → first reel, about 15-20 minutes). The summary below assumes you are comfortable with the Cloudflare dashboard.
+**One-click + a guided wizard — no Cloudflare dashboard required.** Click **Deploy to Cloudflare** (button at top). Cloudflare clones the repo into your GitHub, provisions your D1 + KV + R2 + Worker + container, and deploys. Then open the Worker URL and the built-in **setup wizard** walks you through everything in your browser:
 
-[Use this template](https://github.com/systemstoscale/content-os/generate) to create your own **private** copy, then in Cloudflare open **Workers & Pages → Create → Import a repository** and select your copy. Cloudflare provisions your D1 + KV + R2 + Worker + container, applies migrations, and builds the UI. Then add your keys (Worker → Settings → Variables, or `wrangler secret put`):
+1. **Pick your password** (you choose it — nothing to lose).
+2. **Paste your keys** (each field has a "Where do I get this?" link):
+   - **Required:** `ANTHROPIC_API_KEY` (agent + captions), `GROQ_API_KEY` (transcription), `ZERNIO_API_KEY` + Zernio Profile ID (publishing), Cloudflare Account ID + R2 Access Key ID + R2 Secret (reel storage), and your **Content OS license key** (from your 10xcontent.io purchase).
+   - **Optional:** `KIE_AI_API_KEY` (AI thumbnails/avatar reels), `ELEVENLABS_API_KEY` (voice-cloned TTS).
+3. **Connect Telegram** — create a bot with @BotFather, paste the token, and the wizard auto-registers the webhook; send `/start` to link it.
 
-**Required**
-- `ANTHROPIC_API_KEY` — Claude (the agent + captions + b-roll planning)
-- `GROQ_API_KEY` — Whisper transcription (word timestamps)
-- `ZERNIO_API_KEY` + `ZERNIO_PROFILE_ID` — multi-platform publishing
-- `CLOUDFLARE_ACCOUNT_ID` + `R2_ACCESS_KEY_ID` + `R2_SECRET_ACCESS_KEY` — the render container uploads finished reels to R2
-
-**Optional**
-- `TELEGRAM_BOT_TOKEN` — the Telegram control surface (pair with `/start`)
-- `KIE_AI_API_KEY` — AI thumbnails + AI images + avatar reels
-- `ELEVENLABS_API_KEY` — voice-cloned TTS for avatar reels
-
-After deploy: open the Worker URL, finish `/setup`, set `CONFIG.ZERNIO_ACCOUNTS` (a JSON map of `platform → { accountId }`) once your accounts are connected, then run `/brand` in Telegram to make it yours.
+The wizard stores everything in your own Cloudflare KV (Workers can't set their own secrets), so you never touch Settings → Variables. When it finishes you're signed in and live — drop a video in your Telegram bot, then run `/brand` to make it yours.
 
 > Operators installing for a client can instead run `./install.sh` from a checkout (provisions everything + deploys via the Wrangler CLI).
 
