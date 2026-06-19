@@ -13,7 +13,6 @@ export async function handleHealthFull(req: Request, env: Env): Promise<Response
     DB: "missing",
     ASSETS: "missing",
     CONFIG: "missing",
-    SECRETS: "missing",
     BROWSER: "missing",
     AI: "missing",
     PROCESSOR: "missing",
@@ -43,12 +42,6 @@ export async function handleHealthFull(req: Request, env: Env): Promise<Response
     bindings.CONFIG = "ok";
   } catch {
     bindings.CONFIG = "error";
-  }
-  try {
-    await env.SECRETS.get("__probe__");
-    bindings.SECRETS = "ok";
-  } catch {
-    bindings.SECRETS = "error";
   }
   bindings.BROWSER = env.BROWSER ? "ok" : "missing";
   bindings.AI = env.AI ? "ok" : "missing";

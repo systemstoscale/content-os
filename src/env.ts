@@ -2,8 +2,7 @@ import type { Processor } from "./container";
 import type { BrowserWorker } from "@cloudflare/puppeteer";
 
 export interface Env {
-  // KV
-  SECRETS: KVNamespace;
+  // KV — single namespace (see wrangler.toml for why there's only one).
   CONFIG: KVNamespace;
 
   // R2

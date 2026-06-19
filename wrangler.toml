@@ -32,12 +32,13 @@ fallthrough = true
 [triggers]
 crons = ["* * * * *", "0 7 * * *"]
 
-# KV — secrets store (Deploy button auto-provisions, populates the id).
-[[kv_namespaces]]
-binding = "SECRETS"
-id = ""
-
-# KV — creator config (Deploy button auto-provisions).
+# KV — creator config (Deploy button auto-provisions, populates the id).
+# NOTE: exactly ONE kv_namespaces binding. The Deploy button names every
+# auto-provisioned KV namespace after the PROJECT name, so two blank-id KV
+# bindings both resolve to "<project>" and the second collides with the first
+# ("Cannot provision a KV Namespace with the title ... because it already
+# exists"). Keep this to a single namespace. (The old SECRETS namespace was
+# vestigial — never read at runtime — so it was removed.)
 [[kv_namespaces]]
 binding = "CONFIG"
 id = ""
