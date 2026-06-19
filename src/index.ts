@@ -20,6 +20,7 @@ import { handleTodayApi } from "./api/today";
 import { handleModelApi } from "./api/model";
 import { handleBrandApi } from "./api/brand";
 import { handleIdeasApi } from "./api/ideas";
+import { ensureSchema } from "./lib/migrate";
 
 export { Processor } from "./container";
 export { AvatarReelWorkflow } from "./workflows/avatar-reel";
@@ -35,6 +36,9 @@ export default {
     // /api/* — typed REST surface consumed by the SPA. Must short-circuit
     // BEFORE the asset fallback so /api/drafts doesn't return index.html.
     if (url.pathname.startsWith("/api/")) {
+      // Apply the D1 schema on first hit (Deploy-button installs can't migrate
+      // in the build — see lib/migrate.ts). Idempotent + cached per isolate.
+      await ensureSchema(env);
       // Auth + setup surfaces are the ONLY /api/* routes that don't call
       // requireAuth — /api/auth/login obviously needs to be reachable without
       // an existing session, and /api/setup/* runs pre-auth to bootstrap a
@@ -85,6 +89,9 @@ export default {
       }
       return Response.json({ error: "unknown api route" }, { status: 404 });
     }
+
+    // Triggers all touch D1 — ensure the schema exists first (cached per isolate).
+    if (url.pathname.startsWith("/trigger/")) await ensureSchema(env);
 
     switch (url.pathname) {
       case "/trigger/manual":
@@ -138,10 +145,10 @@ export default {
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(handleCron(event, env));
+    ctx.waitUntil(ensureSchema(env).then(() => handleCron(event, env)));
   },
 
   async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(handleEmail(message, env));
+    ctx.waitUntil(ensureSchema(env).then(() => handleEmail(message, env)));
   },
 };

@@ -18,19 +18,18 @@
   "compatibility_date": "2026-05-15",
   "compatibility_flags": ["nodejs_compat"],
 
-  // Workers Builds runs this before `wrangler deploy` on every push (initial
-  // Deploy-button install + every upstream-sync). It (1) applies all pending D1
-  // migrations so every table/column exists on a fresh install — `wrangler
-  // deploy` alone does NOT run migrations — then (2) builds the Next.js SPA
-  // static export into ./ui/out which Workers Assets serves. The migrations step
-  // is idempotent (wrangler tracks applied ones in d1_migrations), so it's a safe
-  // no-op on every subsequent build.
+  // Builds the Next.js SPA static export into ./ui/out which Workers Assets
+  // serves. NOTE: D1 migrations are NOT applied here — the build runs before the
+  // Deploy button provisions the D1 (and writes its id back), so a build-time
+  // `wrangler d1 migrations apply` can't resolve the database. Migrations are
+  // instead applied at RUNTIME against the env.DB binding (see src/lib/migrate.ts).
   "build": {
-    "command": "bunx wrangler d1 migrations apply content-os --remote && cd ui && bun install --frozen-lockfile && bun run build"
+    "command": "cd ui && bun install --frozen-lockfile && bun run build"
   },
 
-  // Import HTML templates as raw strings.
-  "rules": [{ "type": "Text", "globs": ["**/*.html"], "fallthrough": true }],
+  // Import HTML templates AND .sql migrations as raw strings (the latter is
+  // bundled into the Worker for the runtime migrator — see src/lib/migrate.ts).
+  "rules": [{ "type": "Text", "globs": ["**/*.html", "**/*.sql"], "fallthrough": true }],
 
   // Cron Triggers: per-minute (publish due reels) + 07:00 UTC daily brief.
   "triggers": { "crons": ["* * * * *", "0 7 * * *"] },
