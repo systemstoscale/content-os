@@ -1,0 +1,114 @@
+// Deploy-button-ready wrangler config.
+//
+// This file is what ends up as `wrangler.jsonc` in the public deploy repo at
+// github.com/systemstoscale/content-os. The Cloudflare Deploy button reads this
+// config to know which resources to auto-provision in the buyer's account.
+//
+// WHY JSONC, NOT TOML: when the Deploy button auto-provisions resources it writes
+// the new ids BACK into the config the build then reads — but wrangler ONLY does
+// that write-back for JSON/JSONC, and SILENTLY skips it for TOML (workers-sdk
+// #13632). With TOML, the build's `wrangler d1 migrations apply` couldn't find the
+// just-provisioned D1 ("Couldn't find a D1 DB with the name or binding
+// 'content-os'"). JSONC fixes the write-back so the id is present at build time.
+//
+// Sync to public repo via: scripts/sync-to-public.sh (renames this → wrangler.jsonc)
+{
+  "name": "content-os",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Workers Builds runs this before `wrangler deploy` on every push (initial
+  // Deploy-button install + every upstream-sync). It (1) applies all pending D1
+  // migrations so every table/column exists on a fresh install — `wrangler
+  // deploy` alone does NOT run migrations — then (2) builds the Next.js SPA
+  // static export into ./ui/out which Workers Assets serves. The migrations step
+  // is idempotent (wrangler tracks applied ones in d1_migrations), so it's a safe
+  // no-op on every subsequent build.
+  "build": {
+    "command": "bunx wrangler d1 migrations apply content-os --remote && cd ui && bun install --frozen-lockfile && bun run build"
+  },
+
+  // Import HTML templates as raw strings.
+  "rules": [{ "type": "Text", "globs": ["**/*.html"], "fallthrough": true }],
+
+  // Cron Triggers: per-minute (publish due reels) + 07:00 UTC daily brief.
+  "triggers": { "crons": ["* * * * *", "0 7 * * *"] },
+
+  // KV — creator config (Deploy button auto-provisions, populates the id).
+  // EXACTLY ONE kv_namespaces binding: the Deploy button names every
+  // auto-provisioned KV namespace after the PROJECT name, so two blank-id KV
+  // bindings would both resolve to "<project>" and the second collides with the
+  // first. (The old SECRETS namespace was vestigial — never read at runtime — so
+  // it was removed.)
+  "kv_namespaces": [{ "binding": "CONFIG", "id": "" }],
+
+  // R2 — generated assets bucket.
+  "r2_buckets": [{ "binding": "ASSETS", "bucket_name": "content-os-assets" }],
+
+  // D1 — Deploy button auto-provisions; the id is written back here (JSONC) so
+  // the build's `d1 migrations apply` can resolve it. `migrations_dir` is the
+  // numbered-migration source of truth.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "content-os",
+      "database_id": "",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Browser Rendering binding (for render_html_to_png).
+  "browser": { "binding": "BROWSER" },
+
+  // Workers AI binding (for Whisper voice transcription).
+  "ai": { "binding": "AI" },
+
+  // Static assets — SPA UI served by Workers Assets.
+  "assets": {
+    "directory": "./ui/out",
+    "binding": "ASSETS_STATIC",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/trigger/*", "/r2/*", "/health"]
+  },
+
+  // Workflow bindings: avatar reels + the reel-render pipeline (durable,
+  // multi-minute, retrying).
+  "workflows": [
+    { "name": "avatar-reel", "binding": "AVATAR_REEL_WORKFLOW", "class_name": "AvatarReelWorkflow" },
+    { "name": "reel-render", "binding": "REEL_RENDER_WORKFLOW", "class_name": "ReelRenderWorkflow" }
+  ],
+
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Processor"] }],
+
+  // Reel-render container — a PRE-BUILT public image (built+pushed once by
+  // .github/workflows/build-container.yml). Cloudflare pulls it at deploy; no
+  // Docker needed in the buyer's build.
+  "containers": [
+    {
+      "class_name": "Processor",
+      "image": "docker.io/skalers/content-os-processor:v1",
+      "max_instances": 5,
+      "instance_type": "standard-4",
+      "name": "content-os-processor"
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [{ "class_name": "Processor", "name": "PROCESSOR" }]
+  }
+
+  // Per-creator config: NO vars block. The /setup first-visit wizard inside the
+  // Worker captures CREATOR_NAME / CREATOR_TIMEZONE / APPROVAL_EMAIL /
+  // ZERNIO_PROFILE_ID etc. and writes them to CONFIG KV (see src/profile.ts).
+  //
+  // SECRETS — set in Cloudflare → Settings → Variables after deploy:
+  //   CONTENT_OS_LICENSE_KEY  (required) — your key from 10xcontent.io
+  //   ANTHROPIC_API_KEY       (required) — Claude (editing + captions)
+  //   GROQ_API_KEY            (required) — transcription
+  //   ZERNIO_API_KEY          (required) — Zernio publishing
+  //   R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / CLOUDFLARE_ACCOUNT_ID (required) — reel storage
+  //   TELEGRAM_BOT_TOKEN      (optional) — Telegram bot
+  //   ELEVENLABS_API_KEY      (optional) — voice clone for avatar reels
+  //   KIE_AI_API_KEY          (optional) — AI images + avatar reels (KIE.AI)
+}
