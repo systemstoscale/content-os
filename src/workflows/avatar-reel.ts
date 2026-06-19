@@ -10,6 +10,7 @@ import { renderThumbnail } from "../tools/render";
 import { saveDraft } from "../tools/drafts";
 import { sendPreviewTelegram } from "../tools/telegram-preview";
 import type { ZernioPlatform } from "../tools/zernio";
+import { getCredential } from "../lib/credentials";
 
 /** Input for the Avatar Reel Workflow. Mirrors /trigger/avatar's body. */
 export interface AvatarReelParams {
@@ -244,7 +245,7 @@ async function writeScript(
     .filter(Boolean)
     .join("\n\n");
   const client = new Anthropic({
-    apiKey: env.ANTHROPIC_API_KEY,
+    apiKey: await getCredential(env, "ANTHROPIC_API_KEY"),
     defaultHeaders: { "anthropic-beta": "managed-agents-2026-04-01" },
   });
   const msg = await client.messages

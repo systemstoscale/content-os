@@ -8,6 +8,7 @@ import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 const CONFIG: Array<{ href: string; label: string; blurb: string }> = [
   { href: "/settings/brand", label: "Brand", blurb: "Voice + visual guidelines" },
+  { href: "/settings/telegram", label: "Telegram", blurb: "Connect your bot + webhook" },
   { href: "/settings/model", label: "Model", blurb: "LLM selection" },
   { href: "/settings/config", label: "Config", blurb: "Platform settings" },
   { href: "/settings/health", label: "Health", blurb: "System diagnostics" },

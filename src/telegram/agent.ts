@@ -3,6 +3,7 @@ import type { Env } from "../env";
 import { buildSystemPrompt } from "../prompts/system";
 import { TOOL_SCHEMAS, dispatchTool } from "../tools";
 import { logSession } from "../db";
+import { getCredential } from "../lib/credentials";
 
 const BETA_HEADER = "managed-agents-2026-04-01,mcp-client-2025-04-04";
 const MODEL = "claude-haiku-4-5-20251001";
@@ -18,13 +19,14 @@ async function buildMcpServers(env: Env): Promise<McpServer[]> {
   // Zernio is the only MCP server (media generation runs on KIE.AI via local
   // tools). Returns [] when ZERNIO_API_KEY is unset — chat falls back to the
   // local TOOL_SCHEMAS only.
-  if (!env.ZERNIO_API_KEY) return [];
+  const zernioKey = await getCredential(env, "ZERNIO_API_KEY");
+  if (!zernioKey) return [];
   return [
     {
       type: "url",
       url: "https://mcp.zernio.com/mcp",
       name: "zernio",
-      authorization_token: env.ZERNIO_API_KEY,
+      authorization_token: zernioKey,
     },
   ];
 }
@@ -53,7 +55,7 @@ export async function runTelegramTurn(
   userBlocks: TgContentBlock[]
 ): Promise<TgTurnResult> {
   const client = new Anthropic({
-    apiKey: env.ANTHROPIC_API_KEY,
+    apiKey: await getCredential(env, "ANTHROPIC_API_KEY"),
     defaultHeaders: { "anthropic-beta": BETA_HEADER },
   });
 

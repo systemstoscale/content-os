@@ -6,6 +6,7 @@ import {
   tgSendDocument,
   tgSendMessageWithKeyboard,
 } from "../telegram/api";
+import { getCredential } from "../lib/credentials";
 
 export interface SendPreviewTelegramInput {
   message: string;
@@ -39,7 +40,7 @@ export async function sendPreviewTelegram(
   env: Env,
   input: SendPreviewTelegramInput
 ): Promise<SendPreviewTelegramOutput> {
-  if (!env.TELEGRAM_BOT_TOKEN) {
+  if (!(await getCredential(env, "TELEGRAM_BOT_TOKEN"))) {
     return { ok: false, error: "TELEGRAM_BOT_TOKEN not set — bot not configured" };
   }
   const chat_id = await resolveChatId(env);
@@ -92,7 +93,7 @@ export async function notifyDraftReady(
   env: Env,
   input: NotifyDraftReadyInput,
 ): Promise<NotifyDraftReadyOutput> {
-  if (!env.TELEGRAM_BOT_TOKEN) {
+  if (!(await getCredential(env, "TELEGRAM_BOT_TOKEN"))) {
     // Bot not configured — this is a no-op, NOT a failure. Posting flow
     // still completes via email preview.
     return { ok: false, error: "telegram bot not configured" };

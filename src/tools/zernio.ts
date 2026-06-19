@@ -1,4 +1,5 @@
 import type { Env } from "../env";
+import { getCredential } from "../lib/credentials";
 
 const ZERNIO_BASE = "https://getlate.dev/api/v1";
 
@@ -104,10 +105,11 @@ export async function zernioPublish(
     payload["publishNow"] = true;
   }
 
+  const zernioKey = await getCredential(env, "ZERNIO_API_KEY");
   const res = await fetch(`${ZERNIO_BASE}/posts`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.ZERNIO_API_KEY}`,
+      Authorization: `Bearer ${zernioKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),

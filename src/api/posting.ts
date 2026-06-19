@@ -8,6 +8,7 @@ import { zernioPublish, type ZernioPlatform } from "../tools/zernio";
 import { topPerformers } from "./ideas";
 import { getAgentModel } from "../lib/model";
 import { logAnthropicCost } from "../lib/cost-tracking";
+import { getCredential } from "../lib/credentials";
 
 /** /api/posting/* — Posting surface operations not covered by /api/drafts.
  *
@@ -229,7 +230,7 @@ async function contentReview(env: Env): Promise<Response> {
   }
 
   const model = await getAgentModel(env);
-  const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  const anthropic = new Anthropic({ apiKey: await getCredential(env, "ANTHROPIC_API_KEY") });
   const prompt = [
     `You are the content strategist reviewing this brand's best-performing posts.`,
     `Below are the top posts by engagement (format: "(N engagements) caption").`,

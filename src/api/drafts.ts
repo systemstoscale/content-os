@@ -1,6 +1,7 @@
 import type { Env } from "../env";
 import { requireBearer, methodNotAllowed } from "./auth";
 import { getDraft, markDraftStatus, type DraftRow } from "../db";
+import { getCredential } from "../lib/credentials";
 
 /** /api/drafts — list, get, approve, reject. Backs the Posting UI tables
  *  and detail view. All routes require the Bearer-token gate. */
@@ -163,7 +164,7 @@ async function rejectDraft(req: Request, env: Env, id: string): Promise<Response
 /** Fire a one-way DM. Lazy-imports the helper so this file stays light
  *  and so non-Telegram installs don't drag in the bot code unnecessarily. */
 async function notifyTelegram(env: Env, html: string): Promise<void> {
-  if (!env.TELEGRAM_BOT_TOKEN) return;
+  if (!(await getCredential(env, "TELEGRAM_BOT_TOKEN"))) return;
   const { sendPreviewTelegram } = await import("../tools/telegram-preview");
   // Reuse the existing preview helper — it handles owner resolution + the
   // "no chat captured" case gracefully. We strip the HTML formatting flag

@@ -4,6 +4,7 @@ import { requireBearer, methodNotAllowed } from "./auth";
 import { getAgentModel } from "../lib/model";
 import { logAnthropicCost } from "../lib/cost-tracking";
 import { callZernioMcpTool } from "../clients/zernio-mcp";
+import { getCredential } from "../lib/credentials";
 
 /** /api/ideas — content idea bank (Phase 3, ideation).
  *
@@ -62,7 +63,7 @@ interface ZAnalyticsPost {
  *  of what worked." Best-effort: returns [] if the key is missing or the call
  *  fails — ideation still runs on the brand kit alone. */
 export async function topPerformers(env: Env, take: number): Promise<string[]> {
-  if (!env.ZERNIO_API_KEY) return [];
+  if (!(await getCredential(env, "ZERNIO_API_KEY"))) return [];
   try {
     const res = await callZernioMcpTool<{ posts?: ZAnalyticsPost[] }>(env, "analytics_get_analytics", {
       limit: 50,
@@ -101,7 +102,7 @@ async function generateIdeas(req: Request, env: Env): Promise<Response> {
   ]);
 
   const model = await getAgentModel(env);
-  const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  const anthropic = new Anthropic({ apiKey: await getCredential(env, "ANTHROPIC_API_KEY") });
   const prompt = [
     `You are the content strategist for this brand. Generate ${count} fresh, scroll-stopping post ideas.`,
     body.topic ? `Focus the batch on this topic: ${body.topic}` : `Spread across the content pillars.`,

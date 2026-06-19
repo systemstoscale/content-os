@@ -2,39 +2,88 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { fetchSetupStatus, clearSetupCache } from "@/lib/setup";
+import { api } from "@/lib/api";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-type Step = 1 | 2 | 3;
+/** Guided onboarding. Captures everything a buyer needs in-app — their own
+ *  password, every API key (stored in CONFIG KV by the Worker), and a guided
+ *  Telegram connect — so the system actually works the moment setup finishes.
+ *  No Cloudflare dashboard, nothing to guess. */
+
+type Step = 1 | 2 | 3 | 4;
+const STEP_LABELS = ["Account", "Keys", "Telegram", "Extras"];
 
 interface SetupForm {
+  // account
   email: string;
+  password: string;
+  password2: string;
   creator_name: string;
   creator_timezone: string;
+  // required keys
+  anthropic_api_key: string;
+  groq_api_key: string;
+  zernio_api_key: string;
   zernio_profile_id: string;
-  yt_account_id: string;
-  telegram_chat_id: string;
+  cloudflare_account_id: string;
+  r2_access_key_id: string;
+  r2_secret_access_key: string;
+  content_os_license_key: string;
+  // telegram (required step)
+  telegram_bot_token: string;
+  // optional power-ups
+  kie_ai_api_key: string;
+  elevenlabs_api_key: string;
 }
 
 const EMPTY: SetupForm = {
   email: "",
+  password: "",
+  password2: "",
   creator_name: "",
   creator_timezone: "UTC",
+  anthropic_api_key: "",
+  groq_api_key: "",
+  zernio_api_key: "",
   zernio_profile_id: "",
-  yt_account_id: "",
-  telegram_chat_id: "",
+  cloudflare_account_id: "",
+  r2_access_key_id: "",
+  r2_secret_access_key: "",
+  content_os_license_key: "",
+  telegram_bot_token: "",
+  kie_ai_api_key: "",
+  elevenlabs_api_key: "",
 };
 
 interface SetupResult {
   ok: boolean;
   email?: string;
-  initial_password?: string;
   bearer_token?: string;
   worker_url?: string;
+  telegram_registered?: boolean;
+  license_valid?: boolean;
+  license_reason?: string;
   error?: string;
 }
+
+const MIN_PW = 12;
+
+/** Signup links. Where we own an affiliate, route through a skalers.io/<slug>
+ *  short link (Max controls the underlying URL). Others go direct.
+ *  groq + kie are direct pending an affiliate program. */
+const LINKS = {
+  anthropic: "https://skalers.io/claude",
+  groq: "https://console.groq.com/keys",
+  zernio: "https://skalers.io/zernio",
+  cloudflareAccount: "https://dash.cloudflare.com",
+  cloudflareR2: "https://dash.cloudflare.com/?to=/:account/r2/api-tokens",
+  kie: "https://kie.ai",
+  elevenlabs: "https://skalers.io/elevenlabs",
+  license: "https://10xcontent.io",
+} as const;
 
 export default function Setup() {
   const router = useRouter();
@@ -47,24 +96,29 @@ export default function Setup() {
     fetchSetupStatus(true).then((s) => {
       if (s?.setup_complete) router.replace("/login");
     });
+    // Prefill the timezone from the browser.
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) setForm((p) => ({ ...p, creator_timezone: tz }));
+    } catch {
+      /* keep UTC */
+    }
   }, [router]);
 
   function set<K extends keyof SetupForm>(k: K, v: SetupForm[K]) {
     setForm((p) => ({ ...p, [k]: v }));
   }
 
+  // Finish: create the install, then auto-login with the chosen password.
   const complete = useMutation<SetupResult, Error, void>({
     mutationFn: async () => {
-      const res = await fetch("/api/setup/complete", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const body = (await res.json()) as SetupResult;
-      if (!res.ok || !body.ok) {
-        throw new Error(body.error ?? `HTTP ${res.status}`);
-      }
-      return body;
+      // strip the confirm field before sending
+      const { password2: _omit, ...payload } = form;
+      void _omit;
+      const result = await api.post<SetupResult>("/api/setup/complete", payload);
+      // Log straight in with the password they just chose (no forced change).
+      await api.post("/api/auth/login", { email: form.email.trim().toLowerCase(), password: form.password });
+      return result;
     },
     onSuccess: (data) => {
       clearSetupCache();
@@ -72,44 +126,7 @@ export default function Setup() {
     },
   });
 
-  // Final step: show credentials, link to login.
-  if (done) {
-    return (
-      <main className="mx-auto max-w-2xl px-6 py-10 sm:py-16">
-        <p className="mb-2 text-xs uppercase tracking-widest text-gold">Skalers.io</p>
-        <h1 className="mb-6 font-display text-3xl">Content OS is live</h1>
-        <Card className="mb-6">
-          <CardHeader>
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-gold">
-              Your sign-in credentials
-            </h2>
-          </CardHeader>
-          <CardBody className="space-y-3 text-sm">
-            <Row label="Email" value={<code className="text-gold">{done.email}</code>} />
-            <Row
-              label="Initial password"
-              value={<code className="font-display text-gold">{done.initial_password}</code>}
-            />
-            <Row
-              label="Bearer token (API/curl)"
-              value={
-                <code className="break-all text-xs text-zinc-300">{done.bearer_token}</code>
-              }
-            />
-            <p className="mt-4 text-xs text-zinc-500">
-              Save the password somewhere safe (1Password, etc.). You'll be asked to set a permanent one on first sign-in.
-            </p>
-          </CardBody>
-        </Card>
-        <Button onClick={() => router.push("/login")} className="w-full">
-          Sign in →
-        </Button>
-        <p className="mt-6 text-xs text-zinc-500">
-          Lost the password? Re-deploy from GitHub OR ask your Skalers operator to run <code className="text-gold">./reset-password.sh</code>.
-        </p>
-      </main>
-    );
-  }
+  if (done) return <DoneScreen result={done} onOpen={() => router.push("/")} />;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-10 sm:py-16">
@@ -117,210 +134,241 @@ export default function Setup() {
         <p className="mb-2 text-xs uppercase tracking-widest text-gold">Skalers.io</p>
         <h1 className="font-display text-3xl">Set up Content OS</h1>
         <p className="mt-3 text-sm text-zinc-400">
-          One-time setup. The Cloudflare deploy already provisioned your D1 + KV + R2 + Worker —
-          we just need to know who's running it, then we'll generate your sign-in credentials.
+          A few minutes, all in one place. You'll pick a password, paste your keys, and connect
+          Telegram — then drop a video and get a finished, captioned reel back.
         </p>
       </header>
 
       <Stepper current={step} />
 
       {complete.error && (
-        <Card className="mb-4 bg-red-500/10 p-4 text-sm text-red-200">
-          {String(complete.error)}
-        </Card>
+        <Card className="mb-4 bg-red-500/10 p-4 text-sm text-red-200">{String(complete.error)}</Card>
       )}
 
-      {step === 1 && (
-        <Step1
+      {step === 1 && <StepAccount form={form} set={set} onNext={() => setStep(2)} />}
+      {step === 2 && <StepKeys form={form} set={set} onBack={() => setStep(1)} onNext={() => setStep(3)} />}
+      {step === 3 && <StepTelegram form={form} set={set} onBack={() => setStep(2)} onNext={() => setStep(4)} />}
+      {step === 4 && (
+        <StepExtras
           form={form}
           set={set}
-          onContinue={() => setStep(2)}
-        />
-      )}
-
-      {step === 2 && (
-        <Step2
-          form={form}
-          set={set}
-          onBack={() => setStep(1)}
-          onContinue={() => setStep(3)}
-        />
-      )}
-
-      {step === 3 && (
-        <StepReview
-          form={form}
           busy={complete.isPending}
-          onBack={() => setStep(2)}
-          onComplete={() => complete.mutate()}
+          onBack={() => setStep(3)}
+          onFinish={() => complete.mutate()}
         />
       )}
     </main>
   );
 }
 
-// ─── Steps ───────────────────────────────────────────────────────────────────
+// ─── Step 1 · Account ──────────────────────────────────────────────────────────
 
-function Step1({
+function StepAccount({
   form,
   set,
-  onContinue,
+  onNext,
 }: {
   form: SetupForm;
   set: <K extends keyof SetupForm>(k: K, v: SetupForm[K]) => void;
-  onContinue: () => void;
+  onNext: () => void;
 }) {
+  const pwTooShort = form.password.length > 0 && form.password.length < MIN_PW;
+  const mismatch = form.password2.length > 0 && form.password !== form.password2;
+  const ready =
+    !!form.email.trim() &&
+    !!form.creator_name.trim() &&
+    form.password.length >= MIN_PW &&
+    form.password === form.password2;
+
   return (
     <section className="space-y-5">
-      <h2 className="font-display text-lg">Step 1 · Who are you?</h2>
+      <h2 className="font-display text-lg">Step 1 · Your account</h2>
 
-      <Field label="Your email" hint="Used as your sign-in email and where draft previews land.">
-        <input
-          type="email"
-          value={form.email}
-          onChange={(e) => set("email", e.target.value)}
-          placeholder="you@yourbusiness.com"
-          className="w-full rounded-card border border-bg-graphite bg-black px-3 py-2 text-sm focus:border-gold focus:outline-none"
-          autoFocus
-        />
+      <Field label="Your email" hint="Your sign-in email + where draft previews land.">
+        <TextInput value={form.email} onChange={(v) => set("email", v)} type="email" placeholder="you@yourbusiness.com" autoFocus />
+      </Field>
+
+      <Field label="Choose a password" hint={`At least ${MIN_PW} characters. You set it now — no temporary password to lose.`}>
+        <SecretInput value={form.password} onChange={(v) => set("password", v)} placeholder="••••••••••••" />
+        {pwTooShort && <p className="mt-1 text-xs text-red-300">Too short — needs {MIN_PW}+ characters.</p>}
+      </Field>
+
+      <Field label="Confirm password">
+        <SecretInput value={form.password2} onChange={(v) => set("password2", v)} placeholder="••••••••••••" />
+        {mismatch && <p className="mt-1 text-xs text-red-300">Passwords don't match.</p>}
       </Field>
 
       <Field label="Creator display name" hint="How the agent introduces you in content + emails.">
-        <input
-          type="text"
-          value={form.creator_name}
-          onChange={(e) => set("creator_name", e.target.value)}
-          placeholder="Maxime Warnault"
-          className="w-full rounded-card border border-bg-graphite bg-black px-3 py-2 text-sm focus:border-gold focus:outline-none"
-        />
+        <TextInput value={form.creator_name} onChange={(v) => set("creator_name", v)} placeholder="Maxime Warnault" />
       </Field>
 
-      <Field label="Timezone (IANA)" hint="Drives the 7am daily content cron + email timestamps.">
-        <input
-          type="text"
-          value={form.creator_timezone}
-          onChange={(e) => set("creator_timezone", e.target.value)}
-          placeholder="America/New_York"
-          className="w-full rounded-card border border-bg-graphite bg-black px-3 py-2 font-mono text-sm focus:border-gold focus:outline-none"
-        />
+      <Field label="Timezone" hint="Drives the daily content cron + timestamps (auto-detected).">
+        <TextInput value={form.creator_timezone} onChange={(v) => set("creator_timezone", v)} mono placeholder="America/New_York" />
       </Field>
 
-      <Button
-        onClick={onContinue}
-        disabled={!form.email.trim() || !form.creator_name.trim()}
-        className="w-full"
-      >
+      <Button onClick={onNext} disabled={!ready} className="w-full">
         Continue →
       </Button>
     </section>
   );
 }
 
-function Step2({
+// ─── Step 2 · Required keys ─────────────────────────────────────────────────────
+
+function StepKeys({
   form,
   set,
   onBack,
-  onContinue,
+  onNext,
 }: {
   form: SetupForm;
   set: <K extends keyof SetupForm>(k: K, v: SetupForm[K]) => void;
   onBack: () => void;
-  onContinue: () => void;
+  onNext: () => void;
 }) {
+  const required: (keyof SetupForm)[] = [
+    "anthropic_api_key",
+    "groq_api_key",
+    "zernio_api_key",
+    "zernio_profile_id",
+    "cloudflare_account_id",
+    "r2_access_key_id",
+    "r2_secret_access_key",
+    "content_os_license_key",
+  ];
+  const ready = required.every((k) => String(form[k]).trim().length > 0);
+
   return (
     <section className="space-y-5">
-      <h2 className="font-display text-lg">Step 2 · Zernio</h2>
+      <h2 className="font-display text-lg">Step 2 · Connect your keys</h2>
       <p className="text-sm text-zinc-400">
-        Zernio publishes your posts to IG / TikTok / LinkedIn / YouTube / etc. You already paste
-        your API key during the Cloudflare deploy. Now we need your profile + channel ids.
+        Paste each key once — we store them securely in your own Cloudflare account. Every field has
+        a "Where do I get this?" if you're not sure.
       </p>
 
-      <Field
-        label="Zernio profile ID"
-        hint="The 24-character code in your profile URL."
-      >
-        <input
-          type="text"
-          value={form.zernio_profile_id}
-          onChange={(e) => set("zernio_profile_id", e.target.value)}
-          placeholder="695061a982617b5c3fd7edf1"
-          className="w-full rounded-card border border-bg-graphite bg-black px-3 py-2 font-mono text-sm focus:border-gold focus:outline-none"
-        />
-        <HowTo
-          steps={[
-            "Open zernio.com/dashboard and sign in.",
-            "Click your profile (top-right) — the page URL becomes zernio.com/profile/<id>.",
-            "Copy the 24-character <id> from that URL and paste it here.",
-          ]}
-        />
+      <SecretField label="Anthropic API key" value={form.anthropic_api_key} onChange={(v) => set("anthropic_api_key", v)} placeholder="sk-ant-…"
+        how={["Sign up via the link below, then Settings → API Keys → Create Key.", "This is the editing + caption brain."]} link={LINKS.anthropic} />
+
+      <SecretField label="Groq API key" value={form.groq_api_key} onChange={(v) => set("groq_api_key", v)} placeholder="gsk_…"
+        how={["Sign up via the link below, then API Keys → Create API Key.", "Used for fast, word-accurate transcription."]} link={LINKS.groq} />
+
+      <SecretField label="Zernio API key" value={form.zernio_api_key} onChange={(v) => set("zernio_api_key", v)} placeholder="zrn_…"
+        how={["Sign up via the link below, then Settings → API → Create key.", "This is how we publish to IG / TikTok / YouTube / LinkedIn / FB."]} link={LINKS.zernio} />
+
+      <Field label="Zernio profile ID" hint="The 24-character code in your Zernio profile URL.">
+        <TextInput value={form.zernio_profile_id} onChange={(v) => set("zernio_profile_id", v)} mono placeholder="695061a982617b5c3fd7edf1" />
+        <HowTo steps={["In Zernio, click your profile (top-right).", "The URL becomes zernio.com/profile/<id>.", "Copy the 24-character <id> here."]} />
       </Field>
 
-      <Field
-        label="Zernio YouTube account ID"
-        hint="Optional — only needed to publish YouTube long-form."
-      >
-        <input
-          type="text"
-          value={form.yt_account_id}
-          onChange={(e) => set("yt_account_id", e.target.value)}
-          placeholder="697de5f893a320156c426b36"
-          className="w-full rounded-card border border-bg-graphite bg-black px-3 py-2 font-mono text-sm focus:border-gold focus:outline-none"
-        />
-        <HowTo
-          steps={[
-            "In Zernio, go to Accounts and click your connected YouTube channel.",
-            "The 24-character id is in that account's URL.",
-            "Skip this if you're not publishing long-form YouTube.",
-          ]}
-        />
+      <p className="pt-2 text-xs font-semibold uppercase tracking-widest text-zinc-500">Cloudflare R2 (where your finished reels are stored)</p>
+
+      <Field label="Cloudflare Account ID" hint="Found on your Cloudflare dashboard home, right sidebar.">
+        <TextInput value={form.cloudflare_account_id} onChange={(v) => set("cloudflare_account_id", v)} mono placeholder="32aba2b3…" />
+        <HowTo steps={["Open dash.cloudflare.com.", "On the right sidebar (or any Workers/R2 page) copy 'Account ID'."]} />
       </Field>
+
+      <SecretField label="R2 Access Key ID" value={form.r2_access_key_id} onChange={(v) => set("r2_access_key_id", v)} placeholder="…"
+        how={["Cloudflare → R2 → Manage R2 API Tokens → Create API token.", "Permission: Object Read & Write. Copy the Access Key ID.", "Paste the Secret Access Key in the next field."]} link={LINKS.cloudflareR2} />
+
+      <SecretField label="R2 Secret Access Key" value={form.r2_secret_access_key} onChange={(v) => set("r2_secret_access_key", v)} placeholder="…"
+        how={["This is the second value shown when you created the R2 API token above.", "It's only shown once — if you missed it, create a new token."]} />
+
+      <SecretField label="Content OS license key" value={form.content_os_license_key} onChange={(v) => set("content_os_license_key", v)} placeholder="cos_…"
+        how={["This came with your purchase at 10xcontent.io (check your receipt email).", "It unlocks rendering + publishing."]} link={LINKS.license} />
 
       <div className="flex gap-3">
-        <Button variant="ghost" onClick={onBack} className="flex-1">
-          Back
-        </Button>
-        <Button onClick={onContinue} className="flex-[2]">
-          Continue →
-        </Button>
+        <Button variant="ghost" onClick={onBack} className="flex-1">Back</Button>
+        <Button onClick={onNext} disabled={!ready} className="flex-[2]">Continue →</Button>
+      </div>
+      {!ready && <p className="text-center text-xs text-zinc-500">All fields above are required to continue.</p>}
+    </section>
+  );
+}
+
+// ─── Step 3 · Telegram (guided) ─────────────────────────────────────────────────
+
+function StepTelegram({
+  form,
+  set,
+  onBack,
+  onNext,
+}: {
+  form: SetupForm;
+  set: <K extends keyof SetupForm>(k: K, v: SetupForm[K]) => void;
+  onBack: () => void;
+  onNext: () => void;
+}) {
+  const ready = form.telegram_bot_token.trim().length > 0;
+  return (
+    <section className="space-y-5">
+      <h2 className="font-display text-lg">Step 3 · Connect Telegram</h2>
+      <p className="text-sm text-zinc-400">
+        Telegram is your remote control — drop a video, tap a format, get a finished reel back. Create
+        a bot once (it's free, ~30 seconds):
+      </p>
+
+      <ol className="list-decimal space-y-2 rounded-card border border-bg-graphite bg-black/40 px-5 py-4 text-sm text-zinc-300">
+        <li>
+          Open{" "}
+          <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="text-gold underline">
+            @BotFather
+          </a>{" "}
+          in Telegram.
+        </li>
+        <li>Send <code className="text-gold">/newbot</code> → pick a name → pick a username ending in <code className="text-gold">bot</code>.</li>
+        <li>BotFather replies with a <strong>token</strong> like <code className="text-gold">123456:ABC-DEF…</code> — paste it below.</li>
+      </ol>
+
+      <SecretField
+        label="Telegram bot token"
+        value={form.telegram_bot_token}
+        onChange={(v) => set("telegram_bot_token", v)}
+        placeholder="123456789:ABCdef…"
+        how={["It's the long token BotFather sends right after you create the bot.", "We register the webhook for you when you finish — then you just send /start."]}
+      />
+
+      <p className="rounded-card border border-gold/40 bg-gold/5 p-3 text-xs text-gold/90">
+        After you finish setup we'll auto-connect the webhook, then ask you to send <code>/start</code> to
+        your new bot — the dashboard confirms it live.
+      </p>
+
+      <div className="flex gap-3">
+        <Button variant="ghost" onClick={onBack} className="flex-1">Back</Button>
+        <Button onClick={onNext} disabled={!ready} className="flex-[2]">Continue →</Button>
       </div>
     </section>
   );
 }
 
-function StepReview({
+// ─── Step 4 · Optional power-ups + finish ───────────────────────────────────────
+
+function StepExtras({
   form,
+  set,
   busy,
   onBack,
-  onComplete,
+  onFinish,
 }: {
   form: SetupForm;
+  set: <K extends keyof SetupForm>(k: K, v: SetupForm[K]) => void;
   busy: boolean;
   onBack: () => void;
-  onComplete: () => void;
+  onFinish: () => void;
 }) {
   return (
     <section className="space-y-5">
-      <h2 className="font-display text-lg">Step 3 · Review &amp; finish</h2>
+      <h2 className="font-display text-lg">Step 4 · Power-ups (optional)</h2>
+      <p className="text-sm text-zinc-400">Skip these and add them later in Settings — everything core works without them.</p>
 
-      <Card>
-        <CardBody className="space-y-2 text-sm">
-          <Row label="Email" value={<code className="text-gold">{form.email}</code>} />
-          <Row label="Creator" value={form.creator_name} />
-          <Row label="Timezone" value={form.creator_timezone} />
-          <Row label="Zernio profile" value={form.zernio_profile_id || <span className="text-zinc-600">unset</span>} />
-          <Row label="Zernio YouTube account" value={form.yt_account_id || <span className="text-zinc-600">unset</span>} />
-        </CardBody>
-      </Card>
+      <SecretField label="KIE.AI API key" value={form.kie_ai_api_key} onChange={(v) => set("kie_ai_api_key", v)} placeholder="(optional)"
+        how={["Unlocks AI thumbnails + AI images + talking-head avatar reels.", "Sign up via the link below, then API."]} link={LINKS.kie} />
 
-      <p className="rounded-card border border-gold/40 bg-gold/5 p-3 text-xs text-gold/90">
-        On submit we'll seed the database, generate a memorable password, and show your credentials on the next screen.
-      </p>
+      <SecretField label="ElevenLabs API key" value={form.elevenlabs_api_key} onChange={(v) => set("elevenlabs_api_key", v)} placeholder="(optional)"
+        how={["Unlocks voice-cloned TTS for avatar reels.", "Sign up via the link below, then Profile → API Keys."]} link={LINKS.elevenlabs} />
 
       <div className="flex gap-3">
-        <Button variant="ghost" onClick={onBack} className="flex-1" disabled={busy}>
-          Back
-        </Button>
-        <Button onClick={onComplete} disabled={busy} className="flex-[2]">
+        <Button variant="ghost" onClick={onBack} className="flex-1" disabled={busy}>Back</Button>
+        <Button onClick={onFinish} disabled={busy} className="flex-[2]">
           {busy ? "Setting up…" : "Finish setup →"}
         </Button>
       </div>
@@ -328,12 +376,76 @@ function StepReview({
   );
 }
 
-// ─── Primitives ──────────────────────────────────────────────────────────────
+// ─── Done screen ────────────────────────────────────────────────────────────────
+
+interface TgStatus {
+  token_set: boolean;
+  webhook_registered: boolean;
+  owner_linked: boolean;
+}
+
+function DoneScreen({ result, onOpen }: { result: SetupResult; onOpen: () => void }) {
+  // Poll Telegram status until the owner sends /start.
+  const tg = useQuery<TgStatus>({
+    queryKey: ["setup", "telegram-status"],
+    queryFn: () => api.get<TgStatus>("/api/setup/telegram-status"),
+    refetchInterval: (q) => (q.state.data?.owner_linked ? false : 3000),
+    enabled: !!result.telegram_registered,
+  });
+
+  const ownerLinked = tg.data?.owner_linked ?? false;
+
+  return (
+    <main className="mx-auto max-w-2xl px-6 py-10 sm:py-16">
+      <p className="mb-2 text-xs uppercase tracking-widest text-gold">Skalers.io</p>
+      <h1 className="mb-6 font-display text-3xl">🎉 Content OS is live</h1>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-gold">Setup checklist</h2>
+        </CardHeader>
+        <CardBody className="space-y-2 text-sm">
+          <Check ok label="Account created — you're signed in" />
+          <Check ok label="API keys saved to your Cloudflare account" />
+          <Check ok={result.license_valid} label={result.license_valid ? "License active" : `License: ${result.license_reason ?? "not active"}`} />
+          <Check ok={ownerLinked} pending={!ownerLinked} label={ownerLinked ? "Telegram connected" : "Telegram — send /start to your bot"} />
+        </CardBody>
+      </Card>
+
+      {result.telegram_registered && !ownerLinked && (
+        <Card className="mb-6 border-gold/40 bg-gold/5">
+          <CardBody className="space-y-2 text-sm text-gold/90">
+            <p className="font-semibold">One last tap:</p>
+            <p>Open your new bot in Telegram and send <code className="text-gold">/start</code>. This box turns green automatically.</p>
+            <p className="text-xs text-zinc-400">{tg.isFetching ? "Checking…" : "Waiting for /start…"}</p>
+          </CardBody>
+        </Card>
+      )}
+
+      {result.bearer_token && (
+        <Card className="mb-6">
+          <CardHeader>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-gold">API / curl token</h2>
+          </CardHeader>
+          <CardBody className="space-y-2 text-sm">
+            <p className="text-xs text-zinc-500">Only needed for scripting/automation. Your normal login is the email + password you chose.</p>
+            <CopyRow value={result.bearer_token} />
+          </CardBody>
+        </Card>
+      )}
+
+      <Button onClick={onOpen} className="w-full">Open my dashboard →</Button>
+      <p className="mt-4 text-center text-xs text-zinc-500">Then drop a video in your Telegram bot to make your first reel.</p>
+    </main>
+  );
+}
+
+// ─── Primitives ──────────────────────────────────────────────────────────────────
 
 function Stepper({ current }: { current: Step }) {
   return (
-    <div className="mb-8 flex gap-2 text-xs uppercase">
-      {([1, 2, 3] as Step[]).map((s) => (
+    <div className="mb-8 flex gap-2 text-xs">
+      {([1, 2, 3, 4] as Step[]).map((s) => (
         <div
           key={s}
           className={`flex-1 rounded border px-2 py-1 text-center ${
@@ -344,22 +456,99 @@ function Stepper({ current }: { current: Step }) {
                 : "border-bg-graphite text-zinc-600"
           }`}
         >
-          {s}
+          {STEP_LABELS[s - 1]}
         </div>
       ))}
     </div>
   );
 }
 
-function Field({
+const INPUT_CLS =
+  "w-full rounded-card border border-bg-graphite bg-black px-3 py-2 text-sm focus:border-gold focus:outline-none";
+
+function TextInput({
+  value,
+  onChange,
+  type = "text",
+  placeholder,
+  mono,
+  autoFocus,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  placeholder?: string;
+  mono?: boolean;
+  autoFocus?: boolean;
+}) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+      className={`${INPUT_CLS} ${mono ? "font-mono" : ""}`}
+    />
+  );
+}
+
+function SecretInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoComplete="off"
+        spellCheck={false}
+        className={`${INPUT_CLS} pr-14 font-mono`}
+      />
+      <button
+        type="button"
+        onClick={() => setShow((v) => !v)}
+        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-500 hover:text-gold"
+      >
+        {show ? "Hide" : "Show"}
+      </button>
+    </div>
+  );
+}
+
+function SecretField({
   label,
-  hint,
-  children,
+  value,
+  onChange,
+  placeholder,
+  how,
+  link,
 }: {
   label: string;
-  hint?: string;
-  children: React.ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  how?: string[];
+  link?: string;
 }) {
+  return (
+    <Field label={label}>
+      <SecretInput value={value} onChange={onChange} placeholder={placeholder} />
+      {how && <HowTo steps={how} link={link} />}
+    </Field>
+  );
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="block">
       <div className="mb-1 text-sm font-semibold text-white">{label}</div>
@@ -369,33 +558,61 @@ function Field({
   );
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Check({ ok, label, pending }: { ok?: boolean; label: string; pending?: boolean }) {
+  const icon = ok ? "✅" : pending ? "⏳" : "⚠️";
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-xs uppercase tracking-widest text-zinc-500">{label}</span>
-      <span className="text-right text-zinc-200">{value}</span>
+    <div className="flex items-start gap-2">
+      <span>{icon}</span>
+      <span className={ok ? "text-zinc-200" : "text-zinc-400"}>{label}</span>
     </div>
   );
 }
 
-/** Collapsible "how to get this" helper — plain-English steps, no jargon. */
-function HowTo({ steps }: { steps: string[] }) {
+function CopyRow({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="flex items-center gap-2">
+      <code className="flex-1 break-all rounded border border-bg-graphite bg-black px-2 py-1.5 text-xs text-zinc-300">{value}</code>
+      <button
+        type="button"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(value);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          } catch {
+            /* clipboard blocked */
+          }
+        }}
+        className="shrink-0 rounded border border-bg-graphite px-3 py-1.5 text-xs text-gold hover:border-gold"
+      >
+        {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
+  );
+}
+
+/** Collapsible "how to get this" helper — plain-English steps, optional link. */
+function HowTo({ steps, link }: { steps: string[]; link?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="mt-1.5">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="text-xs text-gold/80 hover:text-gold"
-      >
-        {open ? "Hide" : "How do I find this?"}
+      <button type="button" onClick={() => setOpen((v) => !v)} className="text-xs text-gold/80 hover:text-gold">
+        {open ? "Hide" : "Where do I get this?"}
       </button>
       {open && (
-        <ol className="mt-2 list-decimal space-y-1 rounded-card border border-bg-graphite bg-black/40 px-5 py-3 text-xs text-zinc-400">
-          {steps.map((s, i) => (
-            <li key={i}>{s}</li>
-          ))}
-        </ol>
+        <div className="mt-2 rounded-card border border-bg-graphite bg-black/40 px-5 py-3 text-xs text-zinc-400">
+          <ol className="list-decimal space-y-1">
+            {steps.map((s, i) => (
+              <li key={i}>{s}</li>
+            ))}
+          </ol>
+          {link && (
+            <a href={link} target="_blank" rel="noreferrer" className="mt-2 inline-block text-gold underline">
+              Open →
+            </a>
+          )}
+        </div>
       )}
     </div>
   );

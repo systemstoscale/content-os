@@ -1,5 +1,6 @@
 import type { Env } from "../env";
 import { processorFetch } from "../processor";
+import { getCredential } from "../lib/credentials";
 
 const ELEVENLABS_API = "https://api.elevenlabs.io/v1";
 
@@ -67,7 +68,8 @@ function wrapPcmAsWav(pcm: Uint8Array, sampleRate: number, channels: number, bit
  *  resulting audio in R2. The avatar-reel pipeline passes the returned public
  *  URL to the KIE avatar lipsync model as the audio track. */
 export async function elevenlabsTts(env: Env, input: TtsInput): Promise<TtsOutput> {
-  if (!env.ELEVENLABS_API_KEY) {
+  const elevenlabsKey = await getCredential(env, "ELEVENLABS_API_KEY");
+  if (!elevenlabsKey) {
     throw new Error("ELEVENLABS_API_KEY not set on the Worker — wrangler secret put ELEVENLABS_API_KEY");
   }
   const voiceId = input.voice_id ?? (await env.CONFIG.get("ELEVENLABS_DEFAULT_VOICE_ID"));
@@ -80,7 +82,7 @@ export async function elevenlabsTts(env: Env, input: TtsInput): Promise<TtsOutpu
   const res = await fetch(`${ELEVENLABS_API}/text-to-speech/${voiceId}?output_format=${fmt}`, {
     method: "POST",
     headers: {
-      "xi-api-key": env.ELEVENLABS_API_KEY,
+      "xi-api-key": elevenlabsKey,
       "Content-Type": "application/json",
       "Accept": acceptHeader,
     },

@@ -1,5 +1,6 @@
 import type { Env } from "../env";
 import { pythonReprToJson } from "./zernio-mcp";
+import { getCredential } from "../lib/credentials";
 
 /** Generic Worker-side MCP client (MCP-first foundation).
  *
@@ -25,7 +26,10 @@ export interface McpServerSpec {
 export const MCP_SERVERS: Record<string, McpServerSpec> = {
   zernio: {
     url: "https://mcp.zernio.com/mcp",
-    auth: async (env) => (env.ZERNIO_API_KEY ? `Bearer ${env.ZERNIO_API_KEY}` : null),
+    auth: async (env) => {
+      const key = await getCredential(env, "ZERNIO_API_KEY");
+      return key ? `Bearer ${key}` : null;
+    },
     pythonRepr: true,
     label: "Zernio",
   },

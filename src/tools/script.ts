@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { Env } from "../env";
 import { getAgentModel } from "../lib/model";
 import { logAnthropicCost } from "../lib/cost-tracking";
+import { getCredential } from "../lib/credentials";
 
 // write_script — one Claude call that turns a topic into a ready-to-shoot
 // short-form reel script (hook + 2-4 beats + CTA) PLUS per-platform captions
@@ -87,7 +88,7 @@ export async function generateScript(env: Env, input: GenerateScriptInput): Prom
 
   const model = await getAgentModel(env);
   const client = new Anthropic({
-    apiKey: env.ANTHROPIC_API_KEY,
+    apiKey: await getCredential(env, "ANTHROPIC_API_KEY"),
     defaultHeaders: { "anthropic-beta": "managed-agents-2026-04-01" },
   });
 

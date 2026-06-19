@@ -2,6 +2,7 @@ import type { Env } from "../env";
 import { logApiCost } from "../lib/cost-tracking";
 import { firstResultUrl } from "./kie";
 import { DEFAULT_AVATAR_MODEL, DEFAULT_AVATAR_RESOLUTION } from "../lib/media-config";
+import { getCredential } from "../lib/credentials";
 
 /** KIE.AI audio-driven talking-head (lipsync) — Worker-side.
  *
@@ -61,11 +62,12 @@ interface TaskStatusResponse {
   };
 }
 
-function apiKey(env: Env): string {
-  if (!env.KIE_AI_API_KEY) {
+async function apiKey(env: Env): Promise<string> {
+  const key = await getCredential(env, "KIE_AI_API_KEY");
+  if (!key) {
     throw new Error("KIE.AI not configured — set KIE_AI_API_KEY via `wrangler secret put KIE_AI_API_KEY`");
   }
-  return env.KIE_AI_API_KEY;
+  return key;
 }
 
 async function publicUrlFor(env: Env, r2_key: string): Promise<string> {
@@ -80,7 +82,7 @@ async function publicUrlFor(env: Env, r2_key: string): Promise<string> {
 export async function submitKieLipsync(env: Env, input: KieLipsyncInput): Promise<string> {
   const res = await fetch(`${BASE_URL}/jobs/createTask`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey(env)}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${await apiKey(env)}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: input.model || DEFAULT_AVATAR_MODEL,
       input: {
@@ -109,7 +111,7 @@ export async function probeKieLipsync(
   taskId: string,
 ): Promise<{ status: "pending" | "completed" | "failed"; url: string | null; error: string | null }> {
   const res = await fetch(`${BASE_URL}/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`, {
-    headers: { Authorization: `Bearer ${apiKey(env)}` },
+    headers: { Authorization: `Bearer ${await apiKey(env)}` },
   });
   if (!res.ok) {
     const text = await res.text();

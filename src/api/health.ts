@@ -1,5 +1,6 @@
 import type { Env } from "../env";
 import { requireBearer } from "./auth";
+import { getCredential } from "../lib/credentials";
 
 /** /api/health-full — surfaces every binding's health. The SPA dashboard
  *  polls this so the creator can spot a broken binding at a glance.
@@ -112,7 +113,8 @@ export async function handleHealthFull(req: Request, env: Env): Promise<Response
   // Telegram: needs a bot token + a linked owner chat (a tg_owner row from
   // the founder hitting /start, or a TELEGRAM_CHAT_ID override in CONFIG).
   let telegram: "ok" | "missing" | "error" = "missing";
-  if (env.TELEGRAM_BOT_TOKEN) {
+  const telegramBotToken = await getCredential(env, "TELEGRAM_BOT_TOKEN");
+  if (telegramBotToken) {
     const owner = await env.DB.prepare(`SELECT chat_id FROM tg_owner WHERE id = 1`)
       .first<{ chat_id: number }>()
       .catch(() => null);
@@ -128,8 +130,8 @@ export async function handleHealthFull(req: Request, env: Env): Promise<Response
     telegram,
     // Media generation runs entirely on KIE.AI (single API key, no OAuth).
     media: {
-      kie: env.KIE_AI_API_KEY ? "ok" : "missing",
-      elevenlabs: env.ELEVENLABS_API_KEY ? "ok" : "missing",
+      kie: (await getCredential(env, "KIE_AI_API_KEY")) ? "ok" : "missing",
+      elevenlabs: (await getCredential(env, "ELEVENLABS_API_KEY")) ? "ok" : "missing",
     },
     config: configValues,
     cron: {

@@ -2,6 +2,7 @@ import type { Env } from "../env";
 import { logApiCost } from "../lib/cost-tracking";
 import { DEFAULT_IMAGE_MODEL, getMediaConfig, withCreatorLook } from "../lib/media-config";
 import { r2PublicUrl } from "../lib/r2-url";
+import { getCredential } from "../lib/credentials";
 
 /** KIE.AI image generation (Worker-side).
  *
@@ -59,11 +60,12 @@ interface TaskStatusResponse {
   data?: { taskId: string; state: string; resultJson?: string; failMsg?: string };
 }
 
-function apiKey(env: Env): string {
-  if (!env.KIE_AI_API_KEY) {
+async function apiKey(env: Env): Promise<string> {
+  const key = await getCredential(env, "KIE_AI_API_KEY");
+  if (!key) {
     throw new Error("KIE.AI not configured — set KIE_AI_API_KEY via `wrangler secret put KIE_AI_API_KEY`");
   }
-  return env.KIE_AI_API_KEY;
+  return key;
 }
 
 async function publicUrlFor(env: Env, r2_key: string): Promise<string> {
@@ -101,7 +103,7 @@ function dimsFor(aspect: KieAspectRatio, resolution: KieResolution): { width: nu
 async function createTask(env: Env, body: Record<string, unknown>): Promise<string> {
   const res = await fetch(`${BASE_URL}/jobs/createTask`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey(env)}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${await apiKey(env)}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -122,7 +124,7 @@ async function pollTask(env: Env, taskId: string, timeoutMs = POLL_TIMEOUT_MS): 
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
     const res = await fetch(`${BASE_URL}/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`, {
-      headers: { Authorization: `Bearer ${apiKey(env)}` },
+      headers: { Authorization: `Bearer ${await apiKey(env)}` },
     });
     if (!res.ok) {
       const text = await res.text();

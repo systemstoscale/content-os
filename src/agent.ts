@@ -5,6 +5,7 @@ import { TOOL_SCHEMAS, dispatchTool } from "./tools";
 import { logSession } from "./db";
 import { logAnthropicCost, getDailySpend } from "./lib/cost-tracking";
 import { getAgentModel } from "./lib/model";
+import { getCredential } from "./lib/credentials";
 
 // `managed-agents` is what enables our long tool-use loop. `mcp-client` is
 // what lets us pass `mcp_servers` on /messages so the model can call MCP
@@ -36,12 +37,13 @@ interface McpServer {
 async function buildMcpServers(env: Env): Promise<McpServer[]> {
   const servers: McpServer[] = [];
 
-  if (env.ZERNIO_API_KEY) {
+  const zernioKey = await getCredential(env, "ZERNIO_API_KEY");
+  if (zernioKey) {
     servers.push({
       type: "url",
       url: "https://mcp.zernio.com/mcp",
       name: "zernio",
-      authorization_token: env.ZERNIO_API_KEY,
+      authorization_token: zernioKey,
     });
   }
 
@@ -63,7 +65,8 @@ export interface AgentResult {
 
 export async function runSession(env: Env, brief: AgentBrief): Promise<AgentResult> {
   const sessionId = `ses_${crypto.randomUUID().slice(0, 8)}`;
-  if (!env.ANTHROPIC_API_KEY) {
+  const anthropicKey = await getCredential(env, "ANTHROPIC_API_KEY");
+  if (!anthropicKey) {
     return {
       sessionId,
       finalText: "",
@@ -86,7 +89,7 @@ export async function runSession(env: Env, brief: AgentBrief): Promise<AgentResu
   }
 
   const client = new Anthropic({
-    apiKey: env.ANTHROPIC_API_KEY,
+    apiKey: anthropicKey,
     defaultHeaders: { "anthropic-beta": BETA_HEADER },
   });
 

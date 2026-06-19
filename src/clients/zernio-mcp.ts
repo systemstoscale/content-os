@@ -1,4 +1,5 @@
 import type { Env } from "../env";
+import { getCredential } from "../lib/credentials";
 
 /** JSON-RPC client for https://mcp.zernio.com/mcp.
  *
@@ -29,13 +30,14 @@ async function callMcp<T = unknown>(
   method: "tools/list" | "tools/call",
   params: Record<string, unknown>,
 ): Promise<T> {
-  if (!env.ZERNIO_API_KEY) {
+  const zernioKey = await getCredential(env, "ZERNIO_API_KEY");
+  if (!zernioKey) {
     throw new Error("ZERNIO_API_KEY not set");
   }
   const res = await fetch(MCP_URL, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.ZERNIO_API_KEY}`,
+      Authorization: `Bearer ${zernioKey}`,
       "Content-Type": "application/json",
       Accept: "text/event-stream, application/json",
     },

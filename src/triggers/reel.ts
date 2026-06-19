@@ -23,7 +23,7 @@ export async function startReelRender(env: Env, projectId: string): Promise<stri
   }
   // Pre-flight: a missing key here would otherwise surface as a cryptic
   // container failure minutes later. Fail fast with a plain-language message.
-  const missing = missingReelKeys(env);
+  const missing = await missingReelKeys(env);
   if (missing.length) {
     const project = await getReelProject(env, projectId);
     if (project?.telegram_chat_id) {

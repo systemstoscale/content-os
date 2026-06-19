@@ -1,13 +1,22 @@
 import type { Env } from "../env";
 import { checkLicense } from "./license";
+import { hasCredential } from "./credentials";
 
-/** Secrets required for the reel RENDER pipeline (cut -> captions -> b-roll ->
- *  thumbnail -> upload). Returns the human labels of anything missing. */
-export function missingReelKeys(env: Env): string[] {
+/** Credentials required for the reel RENDER pipeline (cut -> captions -> b-roll ->
+ *  thumbnail -> upload). Returns the human labels of anything missing.
+ *  Reads via getCredential so CONFIG-KV (Deploy-button) installs count too. */
+export async function missingReelKeys(env: Env): Promise<string[]> {
+  const [anthropic, groq, acct, ak, sk] = await Promise.all([
+    hasCredential(env, "ANTHROPIC_API_KEY"),
+    hasCredential(env, "GROQ_API_KEY"),
+    hasCredential(env, "CLOUDFLARE_ACCOUNT_ID"),
+    hasCredential(env, "R2_ACCESS_KEY_ID"),
+    hasCredential(env, "R2_SECRET_ACCESS_KEY"),
+  ]);
   const missing: string[] = [];
-  if (!env.ANTHROPIC_API_KEY) missing.push("ANTHROPIC_API_KEY (the editing + caption brain)");
-  if (!env.GROQ_API_KEY) missing.push("GROQ_API_KEY (transcription)");
-  if (!env.CLOUDFLARE_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY) {
+  if (!anthropic) missing.push("ANTHROPIC_API_KEY (the editing + caption brain)");
+  if (!groq) missing.push("GROQ_API_KEY (transcription)");
+  if (!acct || !ak || !sk) {
     missing.push("R2 credentials (CLOUDFLARE_ACCOUNT_ID + R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY)");
   }
   return missing;
@@ -18,7 +27,7 @@ export function reelConfigHint(missing: string[]): string {
   return (
     "⚠️ I can't render reels yet — these aren't set:\n• " +
     missing.join("\n• ") +
-    "\n\nAdd them in Cloudflare → Workers & Pages → content-os → Settings → Variables and Secrets, then click Deploy. Send /status anytime to check."
+    "\n\nOpen your Content OS dashboard → Settings → API keys and paste them once. Send /status anytime to check."
   );
 }
 
@@ -29,22 +38,35 @@ export interface ConfigStatus {
   licensed: boolean;
 }
 
-/** Booleans-only config snapshot (never leaks values) for /status + /api/health. */
+/** Booleans-only config snapshot (never leaks values) for /status + /api/health.
+ *  Resolves every key via CONFIG-then-env so it reflects the in-app store. */
 export async function configStatus(env: Env): Promise<ConfigStatus> {
-  const zernioAccounts = !!(await env.CONFIG.get("ZERNIO_ACCOUNTS").catch(() => null));
+  const [anthropic, groq, zernio, acct, ak, sk, telegram, kie, eleven, zernioAccounts] =
+    await Promise.all([
+      hasCredential(env, "ANTHROPIC_API_KEY"),
+      hasCredential(env, "GROQ_API_KEY"),
+      hasCredential(env, "ZERNIO_API_KEY"),
+      hasCredential(env, "CLOUDFLARE_ACCOUNT_ID"),
+      hasCredential(env, "R2_ACCESS_KEY_ID"),
+      hasCredential(env, "R2_SECRET_ACCESS_KEY"),
+      hasCredential(env, "TELEGRAM_BOT_TOKEN"),
+      hasCredential(env, "KIE_AI_API_KEY"),
+      hasCredential(env, "ELEVENLABS_API_KEY"),
+      env.CONFIG.get("ZERNIO_ACCOUNTS").then((v) => !!v).catch(() => false),
+    ]);
   const keys: Record<string, boolean> = {
-    ANTHROPIC_API_KEY: !!env.ANTHROPIC_API_KEY,
-    GROQ_API_KEY: !!env.GROQ_API_KEY,
-    ZERNIO_API_KEY: !!env.ZERNIO_API_KEY,
+    ANTHROPIC_API_KEY: anthropic,
+    GROQ_API_KEY: groq,
+    ZERNIO_API_KEY: zernio,
     ZERNIO_ACCOUNTS: zernioAccounts,
-    CLOUDFLARE_ACCOUNT_ID: !!env.CLOUDFLARE_ACCOUNT_ID,
-    R2_ACCESS_KEY_ID: !!env.R2_ACCESS_KEY_ID,
-    R2_SECRET_ACCESS_KEY: !!env.R2_SECRET_ACCESS_KEY,
-    TELEGRAM_BOT_TOKEN: !!env.TELEGRAM_BOT_TOKEN,
-    KIE_AI_API_KEY: !!env.KIE_AI_API_KEY,
-    ELEVENLABS_API_KEY: !!env.ELEVENLABS_API_KEY,
+    CLOUDFLARE_ACCOUNT_ID: acct,
+    R2_ACCESS_KEY_ID: ak,
+    R2_SECRET_ACCESS_KEY: sk,
+    TELEGRAM_BOT_TOKEN: telegram,
+    KIE_AI_API_KEY: kie,
+    ELEVENLABS_API_KEY: eleven,
   };
-  const missing = missingReelKeys(env);
+  const missing = await missingReelKeys(env);
   const licensed = (await checkLicense(env)).valid;
   return { keys, ready: missing.length === 0, missing, licensed };
 }
@@ -72,9 +94,9 @@ export function statusMessage(s: ConfigStatus): string {
     OPTIONAL.map(line).join("\n") +
     "\n\n" +
     (!s.licensed
-      ? "🔒 No active license — render/publish are locked. Get your key at 10xcontent.io, then set CONTENT_OS_LICENSE_KEY in Cloudflare → Settings → Variables."
+      ? "🔒 No active license — render/publish are locked. Get your key at 10xcontent.io, then add it in your dashboard → Settings → API keys."
       : s.ready
         ? "🟢 Render pipeline ready. (Publishing also needs ZERNIO_API_KEY + ZERNIO_ACCOUNTS.)"
-        : "🔴 Not ready — set the ❌ required items in Cloudflare → Settings → Variables, then Deploy.")
+        : "🔴 Not ready — add the ❌ required items in your dashboard → Settings → API keys.")
   );
 }
