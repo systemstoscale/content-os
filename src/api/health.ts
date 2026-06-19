@@ -1,6 +1,7 @@
 import type { Env } from "../env";
 import { requireBearer } from "./auth";
 import { getCredential } from "../lib/credentials";
+import { getProfile } from "../profile";
 
 /** /api/health-full — surfaces every binding's health. The SPA dashboard
  *  polls this so the creator can spot a broken binding at a glance.
@@ -122,10 +123,11 @@ export async function handleHealthFull(req: Request, env: Env): Promise<Response
     telegram = owner?.chat_id || chatCfg ? "ok" : "error";
   }
 
+  const profile = await getProfile(env);
   return Response.json({
     ok: Object.values(bindings).every((v) => v === "ok"),
-    creator: env.CREATOR_NAME,
-    timezone: env.CREATOR_TIMEZONE,
+    creator: profile.creator_name,
+    timezone: profile.creator_timezone,
     bindings,
     telegram,
     // Media generation runs entirely on KIE.AI (single API key, no OAuth).
