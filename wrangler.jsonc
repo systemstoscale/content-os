@@ -88,8 +88,13 @@
       "class_name": "Processor",
       "image": "docker.io/skalers/content-os-processor:v1",
       "max_instances": 5,
-      "instance_type": "standard-4",
-      "name": "content-os-processor"
+      "instance_type": "standard-4"
+      // NO "name" — the container application name is ACCOUNT-GLOBAL, so a
+      // hardcoded name collides when >1 install exists in one account ("already
+      // an application with the name content-os-processor ... different durable
+      // object namespace"). Omitting it makes wrangler derive
+      // "<worker-name>-processor" — unique per install, since the Deploy button
+      // sets a unique worker name per fork.
     }
   ],
 
