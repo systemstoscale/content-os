@@ -1,6 +1,7 @@
 import type { Env } from "../env";
 import { requireBearer, methodNotAllowed } from "./auth";
 import { callZernioMcpTool } from "../clients/zernio-mcp";
+import { hasCredential } from "../lib/credentials";
 
 /** /api/analytics — Zernio MCP analytics surface for the SPA.
  *
@@ -111,9 +112,9 @@ interface DailyMetricsResponse {
 }
 
 async function overview(req: Request, env: Env): Promise<Response> {
-  if (!env.ZERNIO_API_KEY) {
+  if (!(await hasCredential(env, "ZERNIO_API_KEY"))) {
     return Response.json(
-      { error: "ZERNIO_API_KEY not set on this Worker" },
+      { error: "Zernio isn't connected yet — add your Zernio API key in Settings." },
       { status: 503 },
     );
   }

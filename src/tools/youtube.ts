@@ -1,6 +1,8 @@
 import type { Env } from "../env";
 import type { ReelTranscript } from "./reel";
 import { processorFetch } from "../processor";
+import { getCredential } from "../lib/credentials";
+import { profileField } from "../profile";
 
 const ZERNIO_BASE = "https://getlate.dev/api/v1";
 
@@ -59,8 +61,11 @@ export async function zernioYoutubePublish(
   env: Env,
   input: YouTubeUploadInput
 ): Promise<YouTubeUploadOutput> {
-  if (!env.ZERNIO_PROFILE_ID) {
-    return { ok: false, error: "ZERNIO_PROFILE_ID not set" };
+  // Resolve from CONFIG KV (Deploy-button installs) with env fallback (operator).
+  const profileId = await getCredential(env, "ZERNIO_PROFILE_ID");
+  const zernioKey = await getCredential(env, "ZERNIO_API_KEY");
+  if (!profileId) {
+    return { ok: false, error: "Zernio profile ID not set — add it in setup or Settings." };
   }
 
   const platformSpecificData: Record<string, unknown> = {
@@ -86,7 +91,7 @@ export async function zernioYoutubePublish(
   ];
 
   const payload: Record<string, unknown> = {
-    profileId: env.ZERNIO_PROFILE_ID,
+    profileId,
     content: input.description,
     platforms: [
       {
@@ -97,7 +102,7 @@ export async function zernioYoutubePublish(
       },
     ],
     mediaItems,
-    timezone: env.CREATOR_TIMEZONE || "UTC",
+    timezone: await profileField(env, "creator_timezone"),
   };
 
   if (input.scheduled_for) payload["scheduledFor"] = input.scheduled_for;
@@ -105,7 +110,7 @@ export async function zernioYoutubePublish(
   const res = await fetch(`${ZERNIO_BASE}/posts`, {
     method: "POST",
     headers: {
-      authorization: `Bearer ${env.ZERNIO_API_KEY}`,
+      authorization: `Bearer ${zernioKey}`,
       "content-type": "application/json",
     },
     body: JSON.stringify(payload),

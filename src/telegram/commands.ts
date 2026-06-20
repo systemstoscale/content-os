@@ -1,5 +1,6 @@
 import type { Env } from "../env";
-import { tgSendMessage } from "./api";
+import { tgSendMessage, tgDeleteMessage } from "./api";
+import type { CredentialKey } from "../lib/credentials";
 import { resetHistory, getChatStats } from "./agent";
 import { latestPendingDraft, getDraft, recentReelsForChat } from "../db";
 import { publishDraftById, rejectDraft } from "../tools/drafts";
@@ -25,6 +26,7 @@ Drop a video (or paste an R2 link) and pick a format. I edit, caption, and thumb
 (or just tap the Approve / Reject / Publish buttons on the draft DM)
 
 *System*
+\`/key\` — see which API keys are set · \`/key <name> <value>\` to set one (I delete your message after)
 \`/model\` — view or switch your AI model (haiku/sonnet/opus)
 \`/sessions\` — last 5 agent runs with status + tool-call count
 \`/status\` — token usage stats for this chat
@@ -43,7 +45,8 @@ Just describe what you want — for example: "carousel about firing your VAs" or
 export async function handleCommand(
   env: Env,
   chat_id: number,
-  text: string
+  text: string,
+  message_id?: number
 ): Promise<boolean> {
   const trimmed = text.trim();
   if (!trimmed.startsWith("/")) return false;
@@ -187,6 +190,12 @@ export async function handleCommand(
       return true;
     }
 
+    case "/key":
+    case "/keys": {
+      await handleKeyCommand(env, chat_id, arg, message_id);
+      return true;
+    }
+
     case "/resetpassword":
     case "/newpassword": {
       await handlePasswordReset(env, chat_id);
@@ -197,6 +206,75 @@ export async function handleCommand(
       await tgSendMessage(env, chat_id, `Unknown command: ${cmd}\n\nTry /help`);
       return true;
   }
+}
+
+// Friendly aliases → canonical CONFIG credential keys the /key command can set.
+// TELEGRAM_BOT_TOKEN is intentionally excluded — changing it from inside the bot
+// would orphan the webhook (it's set via /setup, which re-registers it).
+const KEY_ALIASES: Record<string, CredentialKey> = {
+  anthropic: "ANTHROPIC_API_KEY",
+  claude: "ANTHROPIC_API_KEY",
+  groq: "GROQ_API_KEY",
+  zernio: "ZERNIO_API_KEY",
+  profile: "ZERNIO_PROFILE_ID",
+  zernio_profile: "ZERNIO_PROFILE_ID",
+  cloudflare: "CLOUDFLARE_ACCOUNT_ID",
+  account: "CLOUDFLARE_ACCOUNT_ID",
+  r2_key: "R2_ACCESS_KEY_ID",
+  r2_secret: "R2_SECRET_ACCESS_KEY",
+  r2_bucket: "R2_BUCKET_NAME",
+  license: "CONTENT_OS_LICENSE_KEY",
+  kie: "KIE_AI_API_KEY",
+  elevenlabs: "ELEVENLABS_API_KEY",
+  eleven: "ELEVENLABS_API_KEY",
+};
+
+/** /key — set an API key from chat. Bare `/key` lists set/missing (masked).
+ *  `/key <name> <value>` stores it in CONFIG, then deletes the message so the
+ *  secret doesn't linger in chat history. Owner-only (every command path has
+ *  already passed isAuthorizedChat upstream). */
+async function handleKeyCommand(
+  env: Env,
+  chat_id: number,
+  arg: string,
+  message_id?: number,
+): Promise<void> {
+  const parts = arg.split(/\s+/).filter(Boolean);
+  const name = (parts[0] ?? "").toLowerCase();
+  const value = parts.slice(1).join(" ").trim();
+
+  if (!name) {
+    const s = await configStatus(env);
+    const lines = Object.entries(s.keys).map(([k, set]) => `${set ? "✅" : "❌"} ${k}`);
+    await tgSendMessage(
+      env,
+      chat_id,
+      "*Your API keys*\n" +
+        lines.join("\n") +
+        "\n\nSet one with `/key <name> <value>` — I delete your message right after.\nNames: " +
+        Object.keys(KEY_ALIASES).join(", "),
+    );
+    return;
+  }
+
+  const canonical = KEY_ALIASES[name];
+  if (!canonical) {
+    await tgSendMessage(env, chat_id, `Unknown key "${name}". Try one of: ${Object.keys(KEY_ALIASES).join(", ")}`);
+    return;
+  }
+  if (!value) {
+    await tgSendMessage(env, chat_id, `Send the value too: \`/key ${name} <value>\``);
+    return;
+  }
+
+  await env.CONFIG.put(canonical, value);
+  if (message_id) await tgDeleteMessage(env, chat_id, message_id); // scrub the secret from chat history
+  const masked = value.length <= 6 ? "••••" : `${value.slice(0, 3)}…${value.slice(-2)}`;
+  await tgSendMessage(
+    env,
+    chat_id,
+    `✅ Saved *${canonical}* (${masked}). Run /status to verify — it's used on your next render/publish.`,
+  );
 }
 
 function cost(tokensIn: number, tokensOut: number): string {

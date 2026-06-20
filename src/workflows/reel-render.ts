@@ -7,6 +7,7 @@ import { sendReelReadyCard } from "../telegram/reel-ui";
 import { tgSendMessage } from "../telegram/api";
 import { thumbnailMode, loadBrandProfile } from "../lib/brand";
 import { kieImage } from "../tools/kie";
+import { hasCredential } from "../lib/credentials";
 
 /** Input for the reel render workflow — everything else lives on the
  *  `reel_projects` row (source video, format, topic, key points, chat id). */
@@ -111,6 +112,18 @@ export class ReelRenderWorkflow extends WorkflowEntrypoint<Env, ReelRenderParams
           await updateReelProject(env, pid, { thumbnail_url: img.public_url });
         } catch (e) {
           console.error(`[reel-render ${pid}] ai-thumbnail failed, keeping overlay:`, String(e));
+          // Most common cause on a fresh install: no KIE key. Tell the buyer
+          // (only in that case) so the silent overlay fallback doesn't look broken.
+          if (project.telegram_chat_id && !(await hasCredential(env, "KIE_AI_API_KEY"))) {
+            const chatId = Number(project.telegram_chat_id);
+            if (Number.isFinite(chatId)) {
+              await tgSendMessage(
+                env,
+                chatId,
+                "ℹ️ Used the overlay thumbnail — AI covers need your KIE.AI key. Add it with `/key kie <value>`.",
+              ).catch(() => {});
+            }
+          }
         }
       });
 

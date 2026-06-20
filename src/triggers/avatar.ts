@@ -1,5 +1,6 @@
 import type { Env } from "../env";
 import { requireBearer } from "../api/auth";
+import { hasCredential } from "../lib/credentials";
 
 /** Avatar reel trigger.
  *
@@ -19,14 +20,14 @@ export async function handleAvatar(
 
   // Fail fast if dependencies are missing — better than burning a workflow
   // instance that's going to die at step 1.
-  if (!env.KIE_AI_API_KEY) {
+  if (!(await hasCredential(env, "KIE_AI_API_KEY"))) {
     return Response.json(
-      { error: "KIE_AI_API_KEY secret not set — run `wrangler secret put KIE_AI_API_KEY`" },
+      { error: "KIE.AI isn't connected — add your KIE.AI API key in Settings (it powers avatar reels)." },
       { status: 503 }
     );
   }
-  if (!env.ELEVENLABS_API_KEY) {
-    return Response.json({ error: "ELEVENLABS_API_KEY secret not set" }, { status: 503 });
+  if (!(await hasCredential(env, "ELEVENLABS_API_KEY"))) {
+    return Response.json({ error: "ElevenLabs isn't connected — add your ElevenLabs API key in Settings." }, { status: 503 });
   }
   // Soft check: without a headshot the creator's face won't be recognizable.
   // Don't hard-fail — a fresh install can still generate a generic talking head

@@ -31,6 +31,7 @@ interface SetupForm {
   cloudflare_account_id: string;
   r2_access_key_id: string;
   r2_secret_access_key: string;
+  r2_bucket_name: string;
   content_os_license_key: string;
   // telegram (required step)
   telegram_bot_token: string;
@@ -52,6 +53,7 @@ const EMPTY: SetupForm = {
   cloudflare_account_id: "",
   r2_access_key_id: "",
   r2_secret_access_key: "",
+  r2_bucket_name: "",
   content_os_license_key: "",
   telegram_bot_token: "",
   kie_ai_api_key: "",
@@ -96,12 +98,19 @@ export default function Setup() {
     fetchSetupStatus(true).then((s) => {
       if (s?.setup_complete) router.replace("/login");
     });
-    // Prefill the timezone from the browser.
+    // Prefill the timezone from the browser, and the R2 bucket from this
+    // install's own hostname — the Deploy button names the bucket after the
+    // project/worker (e.g. content-os-demo.…workers.dev → "content-os-demo").
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      if (tz) setForm((p) => ({ ...p, creator_timezone: tz }));
+      const bucket = location.hostname.split(".")[0] || "";
+      setForm((p) => ({
+        ...p,
+        ...(tz ? { creator_timezone: tz } : {}),
+        ...(bucket && !bucket.includes("localhost") ? { r2_bucket_name: bucket } : {}),
+      }));
     } catch {
-      /* keep UTC */
+      /* keep defaults */
     }
   }, [router]);
 
@@ -234,6 +243,7 @@ function StepKeys({
     "cloudflare_account_id",
     "r2_access_key_id",
     "r2_secret_access_key",
+    "r2_bucket_name",
     "content_os_license_key",
   ];
   const ready = required.every((k) => String(form[k]).trim().length > 0);
@@ -272,6 +282,11 @@ function StepKeys({
 
       <SecretField label="R2 Secret Access Key" value={form.r2_secret_access_key} onChange={(v) => set("r2_secret_access_key", v)} placeholder="…"
         how={["This is the second value shown when you created the R2 API token above.", "It's only shown once — if you missed it, create a new token."]} />
+
+      <Field label="R2 bucket name" hint="Where your finished reels are stored. For a one-click install it's your project name (pre-filled) — confirm it matches the bucket in Cloudflare → R2.">
+        <TextInput value={form.r2_bucket_name} onChange={(v) => set("r2_bucket_name", v)} mono placeholder="content-os" />
+        <HowTo steps={["Cloudflare → R2 → Overview lists your buckets.", "It's the bucket the deploy created for Content OS (usually your project name).", "Copy that exact name here."]} link={LINKS.cloudflareR2} />
+      </Field>
 
       <SecretField label="Content OS license key" value={form.content_os_license_key} onChange={(v) => set("content_os_license_key", v)} placeholder="cos_…"
         how={["This came with your purchase at 10xcontent.io (check your receipt email).", "It unlocks rendering + publishing."]} link={LINKS.license} />

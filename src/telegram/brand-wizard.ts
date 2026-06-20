@@ -7,6 +7,7 @@ import {
   tgEditMessageText,
   type InlineKeyboard,
 } from "./api";
+import { hasCredential } from "../lib/credentials";
 import {
   loadBrandProfile,
   saveBrandProfile,
@@ -213,11 +214,15 @@ export async function handleBrandCallback(env: Env, cq: CallbackQuery): Promise<
       await patchBrandSection(env, "thumbnail_style", { mode: val as "overlay" | "ai" });
       await tgAnswerCallbackQuery(env, cq.id, `Thumbnail: ${val}`);
       if (val === "ai") {
+        const kieReady = await hasCredential(env, "KIE_AI_API_KEY");
         await tgEditMessageText(
           env,
           chatId,
           messageId,
-          "✓ Thumbnail set to **AI** (Nano Banana Pro, face-accurate). It generates from your reel's cover frame on the next render.",
+          "✓ Thumbnail set to **AI** (Nano Banana Pro, face-accurate). It generates from your reel's cover frame on the next render." +
+            (kieReady
+              ? ""
+              : "\n\n⚠️ No KIE.AI key yet — add it (`/key kie <value>`) to enable AI covers. Until then reels use the overlay thumbnail."),
         );
       } else {
         await tgEditMessageText(env, chatId, messageId, "✓ Thumbnail set to **overlay**. Sending a sample…");

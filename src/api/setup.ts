@@ -36,6 +36,7 @@ const KEY_FIELDS: Record<string, CredentialKey> = {
   cloudflare_account_id: "CLOUDFLARE_ACCOUNT_ID",
   r2_access_key_id: "R2_ACCESS_KEY_ID",
   r2_secret_access_key: "R2_SECRET_ACCESS_KEY",
+  r2_bucket_name: "R2_BUCKET_NAME",
   content_os_license_key: "CONTENT_OS_LICENSE_KEY",
   kie_ai_api_key: "KIE_AI_API_KEY",
   elevenlabs_api_key: "ELEVENLABS_API_KEY",
@@ -118,6 +119,7 @@ interface SetupInput {
   cloudflare_account_id?: string;
   r2_access_key_id?: string;
   r2_secret_access_key?: string;
+  r2_bucket_name?: string;
   content_os_license_key?: string;
   kie_ai_api_key?: string;
   elevenlabs_api_key?: string;

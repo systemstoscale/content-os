@@ -127,7 +127,7 @@ async function processMessage(env: Env, chat_id: number, msg: TgMessage): Promis
     await stage(`text="${text.slice(0, 60)}"`);
 
     if (text.startsWith("/")) {
-      if (await handleCommand(env, chat_id, text)) {
+      if (await handleCommand(env, chat_id, text, msg.message_id)) {
         await stage("slash command handled");
         return;
       }
