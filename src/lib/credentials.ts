@@ -42,15 +42,20 @@ export const REQUIRED_CREDENTIALS: CredentialKey[] = [
   "CLOUDFLARE_ACCOUNT_ID",
   "R2_ACCESS_KEY_ID",
   "R2_SECRET_ACCESS_KEY",
-  "R2_BUCKET_NAME",
   "CONTENT_OS_LICENSE_KEY",
 ];
 
-/** Optional — unlock extra features (Telegram control surface, AI media, TTS). */
+/** Optional — unlock extra features (Telegram control surface, AI media, TTS).
+ *  R2_BUCKET_NAME is NOT collected at setup: the Deploy button always provisions
+ *  the literal `content-os-assets` bucket (the ASSETS binding in
+ *  wrangler.deploy.jsonc is a fixed name, not templated to the project), and the
+ *  container defaults to that. It stays here only as an advanced manual override
+ *  (e.g. operator/CLI installs that bind a differently-named bucket). */
 export const OPTIONAL_CREDENTIALS: CredentialKey[] = [
   "TELEGRAM_BOT_TOKEN",
   "KIE_AI_API_KEY",
   "ELEVENLABS_API_KEY",
+  "R2_BUCKET_NAME",
 ];
 
 /** Resolve one credential: CONFIG KV first, then env secret/var, then fallback. */

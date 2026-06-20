@@ -71,11 +71,13 @@ export async function configStatus(env: Env): Promise<ConfigStatus> {
   return { keys, ready: missing.length === 0, missing, licensed };
 }
 
+// Render-pipeline requirements (these gate `ready`). ZERNIO_ACCOUNTS is NOT
+// here on purpose: rendering must complete green without connected socials —
+// publishing readiness is reported separately below as a non-blocking note.
 const REQUIRED = [
   "ANTHROPIC_API_KEY",
   "GROQ_API_KEY",
   "ZERNIO_API_KEY",
-  "ZERNIO_ACCOUNTS",
   "CLOUDFLARE_ACCOUNT_ID",
   "R2_ACCESS_KEY_ID",
   "R2_SECRET_ACCESS_KEY",
@@ -85,18 +87,28 @@ const OPTIONAL = ["TELEGRAM_BOT_TOKEN", "KIE_AI_API_KEY", "ELEVENLABS_API_KEY"];
 /** HTML-formatted /status message for Telegram. */
 export function statusMessage(s: ConfigStatus): string {
   const line = (k: string) => `${s.keys[k] ? "✅" : "❌"} ${k}`;
+  // Publishing readiness is separate from render readiness and NEVER blocks
+  // setup: ZERNIO_ACCOUNTS auto-populates from the buyer's Zernio key once they
+  // connect socials at zernio.com (on the first publish, if not before).
+  const publishingLine = !s.keys["ZERNIO_API_KEY"]
+    ? "❌ Publishing — add ZERNIO_API_KEY to enable"
+    : s.keys["ZERNIO_ACCOUNTS"]
+      ? "✅ Publishing — social accounts connected"
+      : "⚠️ Publishing — connect your social accounts at zernio.com (they'll sync automatically)";
   return (
     "<b>Content OS status</b>\n\n" +
     `${s.licensed ? "✅" : "❌"} License (CONTENT_OS_LICENSE_KEY)\n\n` +
     "<b>Required</b>\n" +
     REQUIRED.map(line).join("\n") +
+    "\n\n<b>Publishing</b>\n" +
+    publishingLine +
     "\n\n<b>Optional</b>\n" +
     OPTIONAL.map(line).join("\n") +
     "\n\n" +
     (!s.licensed
       ? "🔒 No active license — render/publish are locked. Get your key at 10xcontent.io, then add it in your dashboard → Settings → API keys."
       : s.ready
-        ? "🟢 Render pipeline ready. (Publishing also needs ZERNIO_API_KEY + ZERNIO_ACCOUNTS.)"
+        ? "🟢 Render pipeline ready."
         : "🔴 Not ready — add the ❌ required items in your dashboard → Settings → API keys.")
   );
 }

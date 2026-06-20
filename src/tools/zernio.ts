@@ -1,5 +1,6 @@
 import type { Env } from "../env";
 import { getCredential } from "../lib/credentials";
+import { profileField } from "../profile";
 
 const ZERNIO_BASE = "https://getlate.dev/api/v1";
 
@@ -86,7 +87,7 @@ export async function zernioPublish(
     profileId,
     content: input.content,
     platforms: platformList,
-    timezone: env.CREATOR_TIMEZONE || "UTC",
+    timezone: await profileField(env, "creator_timezone"),
   };
 
   if (allMediaUrls.length > 0) {

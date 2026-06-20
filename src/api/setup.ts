@@ -3,6 +3,7 @@ import { hashPassword } from "../lib/password";
 import { methodNotAllowed, requireAuth } from "./auth";
 import { getCredential, hasCredential, REQUIRED_CREDENTIALS, type CredentialKey } from "../lib/credentials";
 import { checkLicense } from "../lib/license";
+import { refreshZernioAccounts } from "../tools/reel-publish";
 
 /** /api/setup/* — Deploy-button first-run onboarding.
  *
@@ -36,7 +37,9 @@ const KEY_FIELDS: Record<string, CredentialKey> = {
   cloudflare_account_id: "CLOUDFLARE_ACCOUNT_ID",
   r2_access_key_id: "R2_ACCESS_KEY_ID",
   r2_secret_access_key: "R2_SECRET_ACCESS_KEY",
-  r2_bucket_name: "R2_BUCKET_NAME",
+  // r2_bucket_name intentionally NOT collected — the Deploy button always
+  // provisions the literal `content-os-assets` bucket and the container defaults
+  // to it, so asking the buyer to name it only lets them get it wrong.
   content_os_license_key: "CONTENT_OS_LICENSE_KEY",
   kie_ai_api_key: "KIE_AI_API_KEY",
   elevenlabs_api_key: "ELEVENLABS_API_KEY",
@@ -119,7 +122,6 @@ interface SetupInput {
   cloudflare_account_id?: string;
   r2_access_key_id?: string;
   r2_secret_access_key?: string;
-  r2_bucket_name?: string;
   content_os_license_key?: string;
   kie_ai_api_key?: string;
   elevenlabs_api_key?: string;
@@ -217,6 +219,16 @@ async function complete(req: Request, env: Env): Promise<Response> {
   let telegram_registered = false;
   if (body.telegram_bot_token?.trim()) {
     telegram_registered = (await registerTelegramWebhook(env, workerUrl)).ok;
+  }
+
+  // Best-effort: pull the buyer's connected social accounts from their Zernio
+  // key into CONFIG.ZERNIO_ACCOUNTS so publishing works without a manual step.
+  // The buyer may not have connected any socials yet — this NEVER blocks setup
+  // (the first publish self-heals via zernioReelPlatforms regardless).
+  try {
+    await refreshZernioAccounts(env);
+  } catch {
+    // ignore — refreshZernioAccounts already swallows its own errors.
   }
 
   // Validate the license (non-blocking — let them into the dashboard to fix it).

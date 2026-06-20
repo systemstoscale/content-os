@@ -9,8 +9,9 @@ import { processReel } from "../tools/reel";
 import { renderThumbnail } from "../tools/render";
 import { saveDraft } from "../tools/drafts";
 import { sendPreviewTelegram } from "../tools/telegram-preview";
-import type { ZernioPlatform } from "../tools/zernio";
+import { zernioReelPlatforms } from "../tools/reel-publish";
 import { getCredential } from "../lib/credentials";
+import { profileField } from "../profile";
 
 /** Input for the Avatar Reel Workflow. Mirrors /trigger/avatar's body. */
 export interface AvatarReelParams {
@@ -149,7 +150,7 @@ export class AvatarReelWorkflow extends WorkflowEntrypoint<Env, AvatarReelParams
       // 11. Save draft.
       const draft = await step.do("save-draft", async () => {
         const caption = `${script}\n\n${params.cta ?? ""}`.trim();
-        const platforms = await zernioPlatformsForReel(env);
+        const platforms = await zernioReelPlatforms(env);
         return saveDraft(
           env,
           {
@@ -166,7 +167,7 @@ export class AvatarReelWorkflow extends WorkflowEntrypoint<Env, AvatarReelParams
 
       // 12. Telegram preview.
       await step.do("preview-telegram", async () => {
-        const platforms = await zernioPlatformsForReel(env);
+        const platforms = await zernioReelPlatforms(env);
         const message = [
           `🎬 AVATAR REEL READY — ${draft.draft_id}`,
           ``,
@@ -224,7 +225,7 @@ async function writeScript(
   const business = await env.CONFIG.get("business-brief.md");
   const hooks = await env.CONFIG.get("hook-bank.md");
   const system = [
-    `You are the script writer for ${env.CREATOR_NAME}'s avatar reels.`,
+    `You are the script writer for ${await profileField(env, "creator_name")}'s avatar reels.`,
     `Write a TIGHT 30-45 second talking-head script (~120 words) the avatar will speak verbatim through an ElevenLabs voice clone.`,
     `Rules: read-aloud-naturally, no bracketed stage directions, no on-screen-text cues, no asterisks, no em dashes, no ellipses.`,
     `Lead with the hook. Walk through the bullets. End with the CTA on a short line.`,
@@ -285,18 +286,4 @@ function pickPillar(topic: string): string | undefined {
   if (/\b(content|reel|video|post)\b/.test(t)) return "Attention";
   if (/\b(close|sale|funnel)\b/.test(t)) return "Conversion";
   return undefined;
-}
-
-async function zernioPlatformsForReel(env: Env): Promise<ZernioPlatform[]> {
-  const raw = await env.CONFIG.get("ZERNIO_ACCOUNTS");
-  if (!raw) return [];
-  try {
-    const map = JSON.parse(raw) as Record<string, { accountId: string }>;
-    const surfaces = ["instagram", "tiktok", "facebook", "youtube", "linkedin"] as const;
-    return surfaces
-      .filter((s) => map[s])
-      .map((s) => ({ platform: s as ZernioPlatform["platform"], accountId: map[s]!.accountId, media_type: "video" as const }));
-  } catch {
-    return [];
-  }
 }

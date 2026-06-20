@@ -2,6 +2,7 @@ import type { Env } from "../env";
 import { runSession } from "../agent";
 import { pillarsUsedSince } from "../db";
 import { runDueReels } from "../tools/reel-publish";
+import { profileField } from "../profile";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -41,7 +42,7 @@ async function runDailyContentBrief(env: Env): Promise<void> {
       : `No pillars have been used yet — pick any.`;
 
   const intent = [
-    `Daily content brief for ${env.CREATOR_NAME}.`,
+    `Daily content brief for ${await profileField(env, "creator_name")}.`,
     exclusionLine,
     `Pick ONE remaining pillar from the content-pillars.md document.`,
     `Choose format: carousel (5–7 slides) OR a single quote post. Pick whichever fits the angle best.`,

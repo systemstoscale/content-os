@@ -1,6 +1,7 @@
 import type { Env } from "../env";
 import { processorFetch } from "../processor";
 import { getCredential } from "../lib/credentials";
+import { r2PublicUrl } from "../lib/r2-url";
 
 const ELEVENLABS_API = "https://api.elevenlabs.io/v1";
 
@@ -29,9 +30,9 @@ export interface TtsOutput {
 }
 
 async function publicUrlFor(env: Env, r2_key: string): Promise<string> {
-  const base = await env.CONFIG.get("R2_PUBLIC_BASE");
-  if (base) return `${base.replace(/\/$/, "")}/${r2_key}`;
-  return `/r2/${r2_key}`;
+  // Canonical helper: WORKER_URL fallback + /r2/ prefix so the URL is
+  // absolute and fetchable by external services (Zernio/KIE) on a fresh install.
+  return r2PublicUrl(env, r2_key);
 }
 
 /** Wrap raw PCM samples in a 44-byte WAV RIFF header. Used because ElevenLabs

@@ -21,6 +21,7 @@ import { handleModelApi } from "./api/model";
 import { handleBrandApi } from "./api/brand";
 import { handleIdeasApi } from "./api/ideas";
 import { ensureSchema } from "./lib/migrate";
+import { profileField } from "./profile";
 
 export { Processor } from "./container";
 export { AvatarReelWorkflow } from "./workflows/avatar-reel";
@@ -116,7 +117,7 @@ export default {
         return handleYoutubeUpload(req, env, ctx);
 
       case "/health":
-        return Response.json({ ok: true, creator: env.CREATOR_NAME });
+        return Response.json({ ok: true, creator: await profileField(env, "creator_name") });
 
       default: {
         // Everything not explicitly handled here falls through to Workers

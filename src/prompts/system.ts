@@ -1,4 +1,5 @@
 import type { Env } from "../env";
+import { getProfile } from "../profile";
 
 const BRAND_RULES = `
 # Brand rules (non-negotiable)
@@ -279,6 +280,8 @@ export async function buildSystemPrompt(env: Env): Promise<string> {
     env.CONFIG.get("CREATOR_LOOK"),
   ]);
 
+  const { creator_name, creator_timezone } = await getProfile(env);
+
   const accountsSection = accountsRaw
     ? [
         `# Zernio account IDs (REQUIRED for publishing)`,
@@ -325,8 +328,8 @@ export async function buildSystemPrompt(env: Env): Promise<string> {
     : `# Foundation\n(not completed yet — the client should finish /foundation so content, copy, and ads speak to a real offer + buyer. Until then, infer carefully from the business brief and ask for specifics.)`;
 
   return [
-    `You are the Content OS agent for ${env.CREATOR_NAME}.`,
-    `Timezone: ${env.CREATOR_TIMEZONE}.`,
+    `You are the Content OS agent for ${creator_name}.`,
+    `Timezone: ${creator_timezone}.`,
     `You turn briefs into ready-to-publish content: static posts (carousel/quote/thumbnail) and post-produced reels from raw uploads.`,
     foundationSection,
     BRAND_RULES,

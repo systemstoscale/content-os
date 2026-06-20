@@ -8,8 +8,44 @@ import {
   type CaptionPayload,
 } from "../db";
 import { saveDraft, publishDraftById } from "./drafts";
-import { tgSendMessage } from "../telegram/api";
+import { tgSendMessage, resolveOwnerChatId } from "../telegram/api";
 import type { ZernioPlatform } from "./zernio";
+import { hasCredential } from "../lib/credentials";
+import { callZernioMcpTool } from "../clients/zernio-mcp";
+
+/** Minimal shape of the Zernio `analytics_get_analytics` response we need to
+ *  derive connected accounts. The analytics API surfaces the full type, but its
+ *  interface is private to that module, so we declare what we read locally. */
+interface ZernioAccountsResponse {
+  accounts?: Array<{ _id: string; platform: string; username?: string }>;
+}
+
+/** Fetch the buyer's connected social accounts from their own Zernio key and
+ *  persist them to CONFIG.ZERNIO_ACCOUNTS as { platform: { accountId, username } }.
+ *  Returns the map (or {} on failure/none). Never throws. */
+export async function refreshZernioAccounts(
+  env: Env,
+): Promise<Record<string, { accountId: string; username?: string }>> {
+  if (!(await hasCredential(env, "ZERNIO_API_KEY"))) return {};
+  let result: ZernioAccountsResponse;
+  try {
+    result = await callZernioMcpTool<ZernioAccountsResponse>(env, "analytics_get_analytics", {
+      limit: 1,
+    });
+  } catch {
+    return {};
+  }
+  const map: Record<string, { accountId: string; username?: string }> = {};
+  for (const a of result.accounts ?? []) {
+    if (a.platform && a._id) {
+      map[a.platform] = { accountId: a._id, username: a.username };
+    }
+  }
+  if (Object.keys(map).length > 0) {
+    await env.CONFIG.put("ZERNIO_ACCOUNTS", JSON.stringify(map));
+  }
+  return map;
+}
 
 // Reels publish through the SAME path as every other draft: we materialise a
 // `drafts` row from the reel + its caption payload, then call publishDraftById
@@ -21,25 +57,40 @@ import type { ZernioPlatform } from "./zernio";
 // decide WHEN publishReel runs. Zernio's own scheduler is bypassed (it's
 // unreliable on Meta/LinkedIn/TikTok — confirmed on the Railway system).
 
+/** Project a ZERNIO_ACCOUNTS map onto the publishable reel surfaces. */
+function platformsFromMap(map: Record<string, { accountId: string }>): ZernioPlatform[] {
+  const surfaces = ["instagram", "tiktok", "facebook", "youtube", "linkedin"] as const;
+  return surfaces
+    .filter((s) => map[s]?.accountId)
+    .map((s) => ({
+      platform: s as ZernioPlatform["platform"],
+      accountId: map[s]!.accountId,
+      media_type: "video" as const,
+    }));
+}
+
 /** Connected publishing accounts, read from CONFIG.ZERNIO_ACCOUNTS
  *  ({ instagram: { accountId }, tiktok: {...}, ... }). Mirrors the avatar-reel
- *  workflow's resolver so all reels publish to the same surfaces. */
+ *  workflow's resolver so all reels publish to the same surfaces.
+ *
+ *  Self-healing: a fresh install never has ZERNIO_ACCOUNTS written, so when the
+ *  map yields zero surfaces we pull the buyer's connected accounts from their
+ *  own Zernio key ONCE and re-derive — the first publish after they connect
+ *  socials at zernio.com populates with no manual step. */
 export async function zernioReelPlatforms(env: Env): Promise<ZernioPlatform[]> {
   const raw = await env.CONFIG.get("ZERNIO_ACCOUNTS");
-  if (!raw) return [];
-  try {
-    const map = JSON.parse(raw) as Record<string, { accountId: string }>;
-    const surfaces = ["instagram", "tiktok", "facebook", "youtube", "linkedin"] as const;
-    return surfaces
-      .filter((s) => map[s]?.accountId)
-      .map((s) => ({
-        platform: s as ZernioPlatform["platform"],
-        accountId: map[s]!.accountId,
-        media_type: "video" as const,
-      }));
-  } catch {
-    return [];
+  let platforms: ZernioPlatform[] = [];
+  if (raw) {
+    try {
+      platforms = platformsFromMap(JSON.parse(raw) as Record<string, { accountId: string }>);
+    } catch {
+      platforms = [];
+    }
   }
+  if (platforms.length > 0) return platforms;
+  // Empty (never written, or no matching surfaces) — try a one-shot refresh.
+  const refreshed = await refreshZernioAccounts(env);
+  return platformsFromMap(refreshed);
 }
 
 /** Compose the full post caption from the framework-aware payload:
@@ -85,12 +136,35 @@ export interface PublishReelResult {
 
 /** Publish a ready reel immediately via its linked draft. Used by the
  *  "Publish now" button and by the scheduling cron when a reel comes due. */
+const NO_ACCOUNTS_MSG =
+  "No connected social accounts — connect them at zernio.com and they'll publish automatically.";
+
 export async function publishReel(env: Env, projectId: string): Promise<PublishReelResult> {
   const project = await getReelProject(env, projectId);
   if (!project) return { ok: false, error: "reel project not found" };
   if (project.status === "cancelled") return { ok: false, error: "reel was cancelled" };
   if (project.status === "published") {
     return { ok: true, zernio_post_id: project.zernio_post_id ?? undefined };
+  }
+
+  // Never mark a reel published when it would target ZERO platforms — that's a
+  // silent no-op. Fail loudly (and ping the owner if we can resolve them) so
+  // the buyer knows to connect their socials at zernio.com.
+  const platforms = await zernioReelPlatforms(env);
+  if (platforms.length === 0) {
+    await updateReelProject(env, projectId, {
+      status: "failed",
+      error_message: NO_ACCOUNTS_MSG,
+    });
+    const ownerChatId = await resolveOwnerChatId(env);
+    if (ownerChatId != null) {
+      await tgSendMessage(
+        env,
+        ownerChatId,
+        `❌ Reel \`${projectId.slice(0, 8)}\` couldn't publish — ${NO_ACCOUNTS_MSG}`,
+      ).catch(() => {});
+    }
+    return { ok: false, error: NO_ACCOUNTS_MSG };
   }
 
   // Lazily mint the draft if the render predates the draft bridge or it's missing.
