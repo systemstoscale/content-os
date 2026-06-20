@@ -18,6 +18,10 @@ on:
 
 jobs:
   build:
+    # Operator-only. Client repos receive this file via upstream sync but must
+    # NOT run it (they have no Docker Hub secrets → it would fail noisily).
+    # Clients just reference the prebuilt public image; only upstream builds it.
+    if: github.repository == 'systemstoscale/content-os'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

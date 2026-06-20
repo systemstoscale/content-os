@@ -1,34 +1,23 @@
 name: Sync with upstream
 
-# Pulls the latest changes from systemstoscale/acquisition-os (the canonical
-# Deploy-button repo) into your fork. Runs nightly and on manual trigger.
+# Keeps your Content OS up to date AUTOMATICALLY — zero setup.
 #
-# Why this needs UPSTREAM_TOKEN:
-#   The upstream repo is PRIVATE — only paying Skalers customers have read
-#   access. The default GITHUB_TOKEN issued to workflows can only see THIS
-#   fork, not the upstream. You must provide a fine-grained PAT with
-#   "Contents: Read" on systemstoscale/acquisition-os and store it as a
-#   repository secret named UPSTREAM_TOKEN in your fork's
-#   Settings → Secrets and variables → Actions.
+# Nightly, this pulls the latest code from the public upstream
+# (github.com/systemstoscale/content-os) into your repo. Cloudflare Workers
+# Builds then auto-redeploys your Worker, so you get every bug fix + new
+# feature for free, without touching anything.
 #
-# How to get the PAT: github.com/settings/personal-access-tokens → New
-# fine-grained token → resource owner: yourself → repo access: only
-# select repositories: systemstoscale/acquisition-os → permissions:
-# Repository → Contents: Read-only. Rotate by updating UPSTREAM_TOKEN.
+# Why it just works:
+#   • Upstream is PUBLIC — no token, no PAT, no "Sync fork" button needed.
+#   • Your settings (API keys, brand, connected accounts, license) live in your
+#     Worker's KV, NOT in this repo — so updating the code never affects your
+#     config or credentials.
 #
-# When this fork updates, Cloudflare Workers Builds auto-redeploys the
-# Worker in your CF account — you get bug fixes + new features for free.
-#
-# Prefer the GitHub UI? Skip the PAT entirely: open your fork on GitHub,
-# click "Sync fork" → "Update branch". This workflow is just the automated
-# version of that button.
-#
-# Disable auto-sync: delete this file from your fork.
+# Don't want auto-updates? Delete this file from your repo.
 
 on:
   schedule:
-    # 03:13 UTC daily — odd minute to dodge the hourly thundering-herd window.
-    - cron: '13 3 * * *'
+    - cron: "13 3 * * *" # 03:13 UTC daily (odd minute to dodge the herd)
   workflow_dispatch:
 
 permissions:
@@ -38,50 +27,27 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout fork
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Configure git
+      - name: Pull latest from upstream and redeploy
         run: |
+          set -e
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-
-      - name: Check UPSTREAM_TOKEN is configured
-        env:
-          UPSTREAM_TOKEN: ${{ secrets.UPSTREAM_TOKEN }}
-        run: |
-          if [ -z "$UPSTREAM_TOKEN" ]; then
-            echo "::warning::UPSTREAM_TOKEN secret not set — skipping auto-sync. See workflow file header for how to create the PAT, or use GitHub's 'Sync fork' button manually."
+          git remote add upstream https://github.com/systemstoscale/content-os.git 2>/dev/null \
+            || git remote set-url upstream https://github.com/systemstoscale/content-os.git
+          git fetch --quiet upstream main
+          if [ "$(git rev-parse HEAD)" = "$(git rev-parse upstream/main)" ]; then
+            echo "Already up to date with upstream."
             exit 0
           fi
-
-      - name: Add upstream remote + fetch
-        if: ${{ secrets.UPSTREAM_TOKEN != '' }}
-        env:
-          UPSTREAM_TOKEN: ${{ secrets.UPSTREAM_TOKEN }}
-        run: |
-          git remote add upstream "https://x-access-token:${UPSTREAM_TOKEN}@github.com/systemstoscale/acquisition-os.git" || \
-            git remote set-url upstream "https://x-access-token:${UPSTREAM_TOKEN}@github.com/systemstoscale/acquisition-os.git"
-          git fetch upstream main
-
-      - name: Fast-forward main from upstream
-        if: ${{ secrets.UPSTREAM_TOKEN != '' }}
-        id: sync
-        run: |
-          # Fast-forward only. If the fork has diverged (you customised
-          # something), we skip with a clear note rather than forcing —
-          # never lose your work.
-          if git merge-base --is-ancestor HEAD upstream/main 2>/dev/null; then
-            git merge --ff-only upstream/main
-            echo "merged=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "merged=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Fork has diverged from upstream — skipping auto-sync. Resolve manually or delete this workflow."
-          fi
-
-      - name: Push if updated
-        if: steps.sync.outputs.merged == 'true'
-        run: git push origin main
+          # This repo is just a deploy vehicle — your config lives in your
+          # Worker's KV, not here — so mirror upstream exactly. On the next
+          # build, Cloudflare re-binds your existing KV/D1/R2 by name, so
+          # nothing is lost.
+          git reset --hard upstream/main
+          git push --force origin main
+          echo "Updated from upstream — Workers Builds will redeploy your Worker."
