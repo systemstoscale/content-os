@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { fetchSetupStatus, clearSetupCache } from "@/lib/setup";
@@ -202,8 +202,8 @@ function StepAccount({
         <TextInput value={form.creator_name} onChange={(v) => set("creator_name", v)} placeholder="Maxime Warnault" />
       </Field>
 
-      <Field label="Timezone" hint="Drives the daily content cron + timestamps (auto-detected).">
-        <TextInput value={form.creator_timezone} onChange={(v) => set("creator_timezone", v)} mono placeholder="America/New_York" />
+      <Field label="Timezone" hint="Drives the daily content cron + timestamps. We auto-detect yours — change it if needed.">
+        <TimezoneSelect value={form.creator_timezone} onChange={(v) => set("creator_timezone", v)} />
       </Field>
 
       <Button onClick={onNext} disabled={!ready} className="w-full">
@@ -490,6 +490,78 @@ function TextInput({
       autoFocus={autoFocus}
       className={`${INPUT_CLS} ${mono ? "font-mono" : ""}`}
     />
+  );
+}
+
+// Curated fallback for the rare runtime without Intl.supportedValuesOf.
+const FALLBACK_ZONES = [
+  "UTC",
+  "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+  "America/Toronto", "America/Mexico_City", "America/Sao_Paulo",
+  "Europe/London", "Europe/Lisbon", "Europe/Paris", "Europe/Berlin", "Europe/Madrid",
+  "Europe/Rome", "Europe/Amsterdam", "Europe/Athens", "Europe/Moscow",
+  "Africa/Cairo", "Africa/Lagos", "Africa/Johannesburg",
+  "Asia/Dubai", "Asia/Kolkata", "Asia/Singapore", "Asia/Hong_Kong", "Asia/Shanghai",
+  "Asia/Tokyo", "Asia/Seoul", "Asia/Jakarta",
+  "Australia/Perth", "Australia/Sydney", "Pacific/Auckland", "Pacific/Honolulu",
+];
+
+const REGION_ORDER = [
+  "General", "America", "Europe", "Africa", "Asia",
+  "Australia", "Pacific", "Atlantic", "Indian", "Antarctica", "Arctic", "Etc",
+];
+
+/** Build the full IANA timezone list (grouped by region) for the dropdown.
+ *  Uses Intl.supportedValuesOf where available; always includes UTC + the
+ *  caller's current (auto-detected) zone so it's selectable. */
+function buildTimezoneGroups(current: string): { label: string; zones: string[] }[] {
+  let all: string[];
+  try {
+    const fn = (Intl as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf;
+    all = typeof fn === "function" ? fn("timeZone") : FALLBACK_ZONES;
+  } catch {
+    all = FALLBACK_ZONES;
+  }
+  const zones = new Set(all);
+  zones.add("UTC");
+  if (current) zones.add(current);
+
+  const byRegion = new Map<string, string[]>();
+  for (const z of zones) {
+    const region = z.includes("/") ? z.split("/")[0]! : "General";
+    if (!byRegion.has(region)) byRegion.set(region, []);
+    byRegion.get(region)!.push(z);
+  }
+  return [...byRegion.entries()]
+    .map(([label, zs]) => ({ label, zones: zs.sort() }))
+    .sort((a, b) => {
+      const ai = REGION_ORDER.indexOf(a.label);
+      const bi = REGION_ORDER.indexOf(b.label);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
+}
+
+function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const groups = useMemo(() => buildTimezoneGroups(value), [value]);
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`${INPUT_CLS} appearance-none pr-9 font-mono`}
+      >
+        {groups.map((g) => (
+          <optgroup key={g.label} label={g.label}>
+            {g.zones.map((z) => (
+              <option key={z} value={z}>
+                {z.replace(/_/g, " ")}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500">▾</span>
+    </div>
   );
 }
 
